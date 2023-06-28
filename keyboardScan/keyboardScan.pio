@@ -1,0 +1,47 @@
+;
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+
+; SET pin 0 should be mapped to your LED GPIO
+
+
+.program keyboardScan
+
+.wrap_target
+    set pins,0x0f     ;可以用侧载，程序可以精简一半，但是都是在一个周期内完成的，可能有问题
+    in pins, 16
+    set pins,0x17 
+    in pins, 16    
+    set pins,0x1b 
+    in pins, 16          
+    set pins,0x1d 
+    in pins, 16        
+    set pins,0x1e 
+    in pins, 16
+.wrap                               
+
+
+% c-sdk {
+// this is a raw helper function for use by the user which sets up the GPIO output, and configures the SM to output on a particular pin
+
+void keyboardScan_program_init(PIO pio, uint sm, uint offset, uint pin) {
+
+    for(int i =0;i<21;i++)
+    {
+        pio_gpio_init(pio, pin+i);
+        if(i>4) gpio_pull_up(pin+i);
+    }
+
+   pio_sm_set_consecutive_pindirs(pio, sm, pin, 5, true);
+   pio_sm_set_consecutive_pindirs(pio, sm, pin+5, 16, false);
+   pio_sm_config c = keyboardScan_program_get_default_config(offset);
+
+   sm_config_set_fifo_join(&c,PIO_FIFO_JOIN_RX);
+   sm_config_set_set_pins(&c, pin,5);
+   sm_config_set_in_pins(&c, pin+5);
+   sm_config_set_in_shift(&c,true,true,32);
+   pio_sm_init(pio, sm, offset, &c);
+}
+%}
