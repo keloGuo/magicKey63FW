@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-include(pico_sdk_import.cmake)
+include(zCmakeFile/pico_sdk_import.cmake)
 
 project(firmware C CXX ASM )
 set(CMAKE_C_STANDARD 11)
@@ -18,25 +18,31 @@ add_subdirectory(./rndis)
 add_subdirectory(./usb) 
 add_subdirectory(./st7735) 
 add_subdirectory(./lib/lvgl) 
+add_subdirectory(./lib/littlefs) 
 add_subdirectory(./FK64UI) 
+add_subdirectory(./lib/cJson) 
 
 include_directories(./rndis)
 include_directories(./keyboardScan)
-include_directories(./usb)
+include_directories(./usb) 
 include_directories(./st7735)
 include_directories(./lib/lvgl) 
+include_directories(./lib/littlefs) 
 include_directories(./FK64UI) 
+include_directories(./lib/cJson) 
+include_directories(./lvglPort) 
+
 add_definitions(-DDUAL_CONFIG=1)
 
 add_executable(firmware 
   main.c
-  lv_port_disp.c
-  flash.c
-  keymap.c
+  keymap.c 
+  dataSaveModel.c
+  ./lvglPort/lv_port_disp.c
 )
 
 target_include_directories(firmware PUBLIC . ${PICO_SDK_PATH}/lib/tinyusb/lib/networking) 
-target_link_libraries(firmware pico_stdlib pico_multicore tinyusb_device rndis userUsb keyboardScan st7735 lvgl FK64UI hardware_flash)
+target_link_libraries(firmware pico_stdlib pico_multicore tinyusb_device rndis userUsb keyboardScan st7735 lvgl FK64UI hardware_flash littleFs cjson)
 pico_enable_stdio_usb(firmware 0)    # Route stdio
 pico_enable_stdio_uart(firmware 1)   # to the UART
 pico_add_extra_outputs(firmware)     # create map/bin/hex file etc.

@@ -6,6 +6,15 @@
 #include "pico/stdlib.h"
 #include "tusb.h"
 
+#define TEST 0
+
+#if TEST
+  #define MAC  {2, 0, 1, 2, 4, 0x77}
+  #define IP   4
+#else
+  #define MAC  {2, 0, 1, 2, 3, 0x77}
+  #define IP   3
+#endif
 static struct mg_tcpip_if *s_ifp;
 
 const uint8_t tud_network_mac_address[6] = {2, 2, 0x84, 0x6A, 0x96, 0};
@@ -45,23 +54,24 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_dta) {
 }
 
 struct mg_mgr mgr;  // Initialise Mongoose event manager
-
+unsigned char packedFilesWrite(unsigned char *p);
 unsigned char rndisInit(void)
 {
 	mg_mgr_init(&mgr);  // and attach it to the interface
 
 	static struct mg_tcpip_driver driver = {.tx = usb_tx, .up = usb_up};
-	static struct mg_tcpip_if mif = {.mac = {2, 0, 1, 2, 3, 0x77},
+	static struct mg_tcpip_if mif = {.mac = MAC,
 					.enable_dhcp_server = true,
 					.driver = &driver,
 					.recv_queue.size = 4096};
 
-	mif.ip =  mg_htonl(MG_U32(192, 168, 3, 1));
-    mif.mask = mg_htonl(MG_U32(255, 255, 255, 0));   
+  mif.ip =  mg_htonl(MG_U32(192, 168, IP, 1));
+  mif.mask = mg_htonl(MG_U32(255, 255, 255, 0));   
 
 	s_ifp = &mif;
 	mg_tcpip_init(&mgr, &mif);
 	web_init(&mgr);
+  
 	return 0;
 }
 

@@ -39,26 +39,29 @@ bool keyMatrix2ReportData(repeating_timer_t *rt)
     if ( !tud_hid_ready() ) return true;
 	unsigned char temp[] = {0x00,0x00,0x00,0,0,0,0,0,0,0,0,0,0,0,0,0};
     unsigned short *data = getkeyMatrixData();
-    for(int i = 0;i< 5;i++)
-    {
-        for(int j = 0; j<16;j++)
-        {
-            unsigned short t = getKeymapByXY(4-i,j);
-            if((t >> 8) == 0x04)
-            {
-                layerChangeKeyHandle((~data[i]) & (0x8000 >> j),(t&0xff));
-            }
-            else
-            {
-                if((~data[i]) & (0x8000 >> j))
-                {
-                    if(t>>8) continue;
-                    temp[t/8] |= (1 << (t%8));
-                }
-            }
+    // for(int i = 0;i< 5;i++)
+    // {
+    //     for(int j = 0; j<16;j++)
+    //     {
+    //         unsigned short t = getKeymapByXY(4-i,j);
+    //         if((t >> 8) == 0x04)
+    //         {
+    //             layerChangeKeyHandle((~data[i]) & (0x8000 >> j),(t&0xff));
+    //         }
+    //         else
+    //         {
+    //             if((~data[i]) & (0x8000 >> j))
+    //             {
+    //                 if(t>>8) continue;
+    //                 temp[t/8] |= (1 << (t%8));
+    //             }
+    //         }
 
-        }
-    }
+    //     }
+    // }
+
+    memcpy(temp,data,10);
+
     tud_hid_n_report(0,0,temp,16);
     return true ;
 }

@@ -35,7 +35,6 @@ static int count_chan = 0;
 
 unsigned char keyboardScanDmaInit(PIO pio, uint sm, unsigned short *capture_buf)
 {
-
     ctrl_chan = dma_claim_unused_channel(true);                                             //dma 控制通道                     
     data_chan = dma_claim_unused_channel(true);                                             //dma 数据通道
     count_chan = dma_claim_unused_channel(true);                                            //dma 数据通道
@@ -84,59 +83,25 @@ void keyboardScanStart(uint sm, uint pin, unsigned short *capture_buf)
     pio_sm_set_enabled(pio, sm, true);
 }
 //500k 每秒字节，可以用DMA ，但是CPU处理不过来啊
-static unsigned char keyboardScanErro  = 0;
-unsigned char checkKeyboardScanErroAndRestart(void);
+
 unsigned char keyboardScanBuffErroHandle(void)
 {
-    static unsigned char erroCount = 0;
-    if(checkKeyboardScanErroAndRestart()) return 0;
-    if(dma_channel_is_busy(data_chan) == 0)
-    {
-        if(erroCount > 3) 
-        {
-            if(keyboardScanErro == 0)
-            {
-                printf("keyboard scan buff erro \r\n");
-                keyboardScanErro = 1;
-            }
+    if((void *)(dma_channel_hw_addr(data_chan)->write_addr) != NULL) return 0;  //肯定是停了
 
-            return 1;
-        }
-        erroCount ++;
-        return 1;
-    }
-    erroCount = 0; 
-    return 0;
-}
-
-
-unsigned char keyboardRestart = 0;
-unsigned char keyboardRestartSet(void)
-{
-    keyboardRestart = 1;
-    return 0;
-}
-//写flash的时候会停掉核心2，这个时候可能会缓存不够用，这里可以重启
-unsigned char checkKeyboardScanErroAndRestart(void)
-{
-    if(keyboardRestart  == 0) return 0;
-    keyboardRestart = 0;
-    
-    printf("checkKeyboardScanErroAndRestart \r\n");
-
-    dma_channel_abort(data_chan);
-    dma_channel_abort(count_chan);
-    dma_channel_abort(ctrl_chan);
+    printf("temp keyboardScanBuffErroHandle stop\r\n");
 
     dataCount.dmaBuffAddr[0] = dmaBuff;
     dataCount.dmaBuffAddr[1] = dmaBuff+PIO_BUFF_LEN;
     dataCount.dataCountBuff[0] = 1;
-    keyboardScanErro = 0;
-    dma_channel_set_write_addr(count_chan,dataCount.dataCountBuff,false);
-    
+
+    dma_channel_set_write_addr(count_chan,dataCount.dataCountBuff,false); //这里还需要重新启动 pio，不然位置对不上
     dma_start_channel_mask(1u << ctrl_chan);    
+
     return 1;
 }
+
+
+
 //4M 4000000
 /*
 大前提：
@@ -168,7 +133,7 @@ static unsigned short keyboardScanDataTemp[32]  __attribute__((aligned(32))) = {
 //初始化键盘扫描
 unsigned char keyboardScanInit(void)
 {
-    printf("keyboardScanInit =%x %x %x %x %x\r\n", &dataCount.dataCountFlag,&(dataCount.FillData[0]),&(dataCount.FillData[1]),&(dataCount.dmaBuffAddr[0]),&(dataCount.dmaBuffAddr[1]));
+    //printf("keyboardScanInit =%x %x %x %x %x\r\n", &dataCount.dataCountFlag,&(dataCount.FillData[0]),&(dataCount.FillData[1]),&(dataCount.dmaBuffAddr[0]),&(dataCount.dmaBuffAddr[1]));
     keyboardScanStart(0, 7,dmaBuff);
     memset((char *)keyboardScanDataTemp , 0xff,64);
     return 0;
@@ -209,11 +174,9 @@ unsigned char keyboardScanDataHandleOne(unsigned short *data)
         // }
     } 
 
-    //(keyboardScanDataOld[1] & 0x4000) == 0  下
-
-    encoderScan(keyboardScanDataOld[0]&0x4000,keyboardScanDataOld[2]&0x4000);                   //处理编码器 旋钮 ab相
+    //(keyboardScanDataOld[1] & 0x4000) == 0  下 这里需要优先处理按键。
     encoderKeyScan((keyboardScanDataOld[1] & 0x4000) != 0);   //处理编码器 按键
-
+    encoderScan(keyboardScanDataOld[0]&0x4000,keyboardScanDataOld[2]&0x4000);                   //处理编码器 旋钮 ab相
     {
         static unsigned char count = 0;
         memcpy((char *)(keyboardScanDataTemp + (count *8)),(char *)data,10);
@@ -239,57 +202,4 @@ unsigned char dmaHandle(void)
     }
     return 0;
 }
-void encoderCallback(int t,unsigned char key);
-//编码器扫描 这里只处理 AB相位，按键别的地方已经处理了
-unsigned char encoderScan(unsigned short a,unsigned short b)
-{
-    static unsigned short aOld = 0; //按下时1，松开是0
-    static unsigned short bOld = 0;
 
-    if((a != aOld))//
-    {   
-        if((aOld != 0) && (b != 0))
-        {
-            encoderCallback(1,3);
-        }
-        aOld = a;
-    }
-
-    if((b != bOld))
-    {
-        if((bOld != 0) && (a != 0))
-        {
-            encoderCallback(-1,3);
-        }
-           
-        bOld = b;
-    }
-    return 0;
-}
-//单独处理编码器按键
-unsigned char encoderKeyScan(unsigned char newStete)
-{
-    static unsigned int count = 0;
-    static unsigned char oldState = 1;
-    count ++;
-    unsigned char hop = (oldState != newStete);
-    //printf("encoderKeyScan %d %d %d\r\n",hop,newStete,count);
-    if(hop == 0) //没有变化
-    {
-        if((newStete  == 0)&&(count == 1000)) //新值一直是0，所以一直是按下的
-        {
-            encoderCallback(0,2);//触发长按，
-        }
-        return 0;
-    }
-    oldState = newStete;
-    if(newStete  == 0) count =0; //刚刚按下，从新计数
-    if(newStete == 1) //刚刚松开 
-    {
-        if((count <1000) && (count > 10)) 
-        {
-            encoderCallback(0,1);//触发短按
-        }
-    }
-    return 0;
-}

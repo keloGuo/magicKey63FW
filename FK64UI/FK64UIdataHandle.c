@@ -104,6 +104,21 @@ unsigned char layerNumberChange(signed char layer)
     return 0;
 }
 
+unsigned char layerNumberSet(signed char layer)
+{
+    layerNumber = layer;
+    if (layerNumber > 4) layerNumber = 1;
+    if (layerNumber < 1) layerNumber = 4;
+
+    layerShowUpdte(layerNumber);
+    layerNumberShowUpdateStatePage();
+
+    unsigned char writeFlashLayerInfo(unsigned char layer);
+    writeFlashLayerInfo(layerNumber);
+
+    return 0;
+}
+
 
 //通过UI设置当前回报率
 unsigned char getFlashRateInfo(void);

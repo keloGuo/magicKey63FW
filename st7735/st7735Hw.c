@@ -12,9 +12,9 @@
 
 static unsigned char st7735IoInit(void)
 {
-    gpio_init(LCD_BL_PIN);
-    gpio_set_dir(LCD_BL_PIN, GPIO_OUT);
-    gpio_put(LCD_BL_PIN, 1);  
+    // gpio_init(LCD_BL_PIN);
+    // gpio_set_dir(LCD_BL_PIN, GPIO_OUT);
+    // gpio_put(LCD_BL_PIN, 1);  
 
     //复位线
     gpio_init(LCD_RST_PIN);
