@@ -5,7 +5,7 @@
 
 // Linux supports either RNDIS, CDC-ECM or CDC-NCM
 
-#define CFG_TUD_HID               2
+#define CFG_TUD_HID               3
 #define CFG_TUD_ECM_RNDIS         1
 #define CFG_TUD_MSC               0    // This enables mass storage
 #define CFG_TUD_MSC_EP_BUFSIZE    512   // Also Add msc_disk.c and descritors

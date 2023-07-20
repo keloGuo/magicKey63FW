@@ -97,7 +97,7 @@ unsigned char dataSaveRate(unsigned char v)
     return 0;
 }
 
-//保存回报率
+//保存 状态页自定义的功能
 unsigned char dataSaveStatePageFunction(unsigned char v)
 {
     lfs_file_t lfsConfigData; //存储配置的文件句柄

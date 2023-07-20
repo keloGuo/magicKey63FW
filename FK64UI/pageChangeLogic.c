@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "pico/stdlib.h"
+
 #include "lvgl.h"
 #include "FK64UI.h"
 #include "pageChangeLogic.h"
@@ -125,10 +127,10 @@ pageInfo* pageRegister(pageInfo* tempHomepage,lv_obj_t* pageHandleX, lv_obj_t* p
 
 static int t = 0;
 static unsigned char key = 0;
-unsigned char encoderProcess(void)
+bool encoderProcess(repeating_timer_t *rt)
 {
 	
-	if(t == 0 && key == 0) return 0;
+	if(t == 0 && key == 0) return 1;
 
 	// printf("temp encoderCallback %d %d %d\r\n ", t,key, Activated->homepage == NULL);
 	if ((Activated->homepage == NULL)) //当前在母页
@@ -138,13 +140,13 @@ unsigned char encoderProcess(void)
 		{
 			pageChange(t, 0);
 			t = 0;
-			return 0;
+			return 1;
 		}
 		if (key == 1)
 		{
 			pageChange(0, 1);
 			key = 0;
-			return 0;
+			return 1;
 		}
 	}
 	else
@@ -153,7 +155,7 @@ unsigned char encoderProcess(void)
 		{
 			if (Activated->keyHandleCallback != NULL) Activated->keyHandleCallback(t);
 			t = 0;
-			return 0;
+			return 1;
 		}
 		if (key == 2)
 		{
@@ -161,10 +163,15 @@ unsigned char encoderProcess(void)
 			key = 0;
 		}
 	}
+	return 1;
+}
+struct repeating_timer encoderTimer;
+
+unsigned char encoderTmierInit(void)
+{
+	add_repeating_timer_ms(30,encoderProcess,0,&encoderTimer);
 	return 0;
 }
-
-
 
 void encoderCallback(int tx,unsigned char keyT)
 {

@@ -53,6 +53,7 @@ enum
   ITF_NUM_CDC_DATA,
   ITF_NUM_HID0,
   ITF_NUM_HID1,
+  ITF_NUM_HID2,
   ITF_NUM_TOTAL
 };
 
@@ -139,26 +140,81 @@ uint8_t const desc_hid_report0[] =
 //HID 自定义设备的报表描述符
 uint8_t const desc_hid_report1[] =
 {
-  TUD_HID_REPORT_DESC_GENERIC_INOUT(CFG_TUD_HID_EP_BUFSIZE)
+	0x05, 0x0C, 			//USAGE_PAGE 用途页选择0x0c(用户页)
+	0x09, 0x01, 			//USAGE 接下来的应用集合用于用户控制
+	0xA1, 0x01, 			//COLLECTION 开集合
+	0x15, 0x00, 			//LOGICAL_MINIMUM (0)
+	0x25, 0x01, 			//LOGICAL_MAXIMUM (1)
+	0x0A, 0xE9, 0x00,		/* Usage( Vol- ) 			音量加*/
+	0x0A, 0xEA, 0x00,		/* Usage( Vol+ ) 			音量减*/
+	0x0A, 0xE2, 0x00,		/* Usage( Mute ) 			静音*/
+	0x0A, 0x8A, 0x01,		/* Usage( Email )*/
+	0x0A, 0x83, 0x01,		/* Usage( Media ) 			播放器*/
+	0x0A, 0x23, 0x02,		/* Usage( WWW Home ) 		浏览器*/
+	0x0A, 0xCD, 0x00,		/* Usage( Play/Pause ) 		播放/暂停*/
+	0x0A, 0xB6, 0x00,		/* Usage( Scan Pre  Track ) 上一曲*/
+	0x0A, 0xB5, 0x00,		/* Usage( Scan Next Track ) 下一曲*/
+	0x0A, 0xB7, 0x00,		/* Usage( Stop ) 			停止*/
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x00, 0x00,		/* Usage( NULL ) */
+	0x0A, 0x11, 0x22,		/* Usage( NULL ) */
+	0x75, 0x01, //REPORT_SIZE (1)
+	0x95, 0x18, //REPORT_COUNT (24)
+	0x81, 0x02, //INPUT (Data,Var,Abs)输入24bit数据
+	0x05, 0x01, //USAGE_PAGE 用途页0x01(普通桌面)
+	0x19, 0x00, //USAGE_MINIMUM 用途最小值0x00(未定义)
+	0x29, 0x83, //USAGE_MAXIMUM 用途最大值0x83(系统唤醒)
+	0x15, 0x00, //LOGICAL_MINIMUM (0)
+	0x25, 0x83, //LOGICAL_MAXIMUM (83)
+	0x75, 0x08, //REPORT_SIZE (8)
+	0x95, 0x01, //REPORT_COUNT (1)
+	0x81, 0x00, //INPUT (Data,Ary,Abs)输入1字节数据
+	0xC0,//END_COLLECTION 闭合集合
 };
+
+uint8_t const desc_hid_report2[] =
+{
+    0x05,0x01,0x09,0x02,0xA1,0x01,0x09,0x01,
+    0xA1,0x00,0x05,0x09,0x19,0x01,0x29,0x03,
+    0x15,0x00,0x25,0x01,0x75,0x01,0x95,0x03,
+    0x81,0x02,0x75,0x05,0x95,0x01,0x81,0x01,
+    0x05,0x01,0x09,0x30,0x09,0x31,0x09,0x38,
+    0x15,0x81,0x25,0x7f,0x75,0x08,0x95,0x03,
+    0x81,0x06,0xC0,0xC0
+};
+
+const uint8_t *descHid[] = {desc_hid_report0,desc_hid_report1,desc_hid_report2};
 
 //获取HID报表描述符的回调
 uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
 {
   printf("tud_hid_descriptor_report_cb %d \r\n",itf);
-  return itf ? desc_hid_report1 : desc_hid_report0;
+  if(itf > 2) return NULL;  
+  return descHid[itf];
 }
 
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
-#define MAIN_CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_RNDIS_DESC_LEN +  TUD_HID_DESC_LEN + TUD_HID_INOUT_DESC_LEN)  // + TUD_MSC_DESC_LEN
+#define MAIN_CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_RNDIS_DESC_LEN +  TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_DESC_LEN)  // + TUD_MSC_DESC_LEN TUD_HID_INOUT_DESC_LEN
 
 #define EPNUM_HID0        0x01
 #define EPNUM_HID1        0x02
-#define EPNUM_NET_NOTIF   0x83
-#define EPNUM_NET_OUT     0x04
-#define EPNUM_NET_IN      0x84
+#define EPNUM_HID2        0x03
+#define EPNUM_NET_NOTIF   0x84
+#define EPNUM_NET_OUT     0x05
+#define EPNUM_NET_IN      0x85
 
 uint8_t rndis_configuration[] =
 {
@@ -169,8 +225,10 @@ uint8_t rndis_configuration[] =
   TUD_RNDIS_DESCRIPTOR(ITF_NUM_CDC, 0, EPNUM_NET_NOTIF, 8, EPNUM_NET_OUT, EPNUM_NET_IN, CFG_TUD_NET_ENDPOINT_SIZE),
 
   TUD_HID_DESCRIPTOR(ITF_NUM_HID0, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report0), EPNUM_HID0 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
-  TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID1, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report1), EPNUM_HID1, 0x80 | EPNUM_HID1, CFG_TUD_HID_EP_BUFSIZE, 10),
+  TUD_HID_DESCRIPTOR(ITF_NUM_HID1, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report1), EPNUM_HID1 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
+  TUD_HID_DESCRIPTOR(ITF_NUM_HID2, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report2), EPNUM_HID2 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
 
+//  TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID1, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report1), EPNUM_HID1, 0x80 | EPNUM_HID1, CFG_TUD_HID_EP_BUFSIZE, 10),
 };
 
 

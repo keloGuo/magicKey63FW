@@ -8,4 +8,5 @@ lv_obj_t* FK64UILinghtPageinit(lv_obj_t* temp);
 lv_obj_t* FK64UIRatePageinit(lv_obj_t* temp);
 unsigned char getStateLedState(void);
 unsigned char updateLedState(unsigned char state);
+lv_obj_t* FK64UIAPMPageinit(lv_obj_t* temp);
 

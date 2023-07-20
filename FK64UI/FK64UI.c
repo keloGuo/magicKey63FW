@@ -27,9 +27,10 @@ void FK64UI(void)
     //FK64UILinghtPageinit(tabview);
     FK64UIRatePageinit(tabview);
     //printf("ui init start %d \r\n",4);
+    FK64UIAPMPageinit(tabview);
     FK64UIBootPageinit(tabview);
     //printf("ui init start %d \r\n",5);
- 
+    
 }
 
 

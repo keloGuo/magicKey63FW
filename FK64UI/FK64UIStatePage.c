@@ -8,7 +8,7 @@
 #include "FK64UI.h"
 
 unsigned char showFuncNumber = 2; //灯光效果，APM, 回包率
-unsigned char showFuncNumberValuelist[] = {0,0,0};
+unsigned int showFuncNumberValuelist[] = {0,0,0};
 const char* showFuncNumberList[3] = { "light" ,"APM","rate" };
 
 //更新3个虚拟的led灯
@@ -95,6 +95,13 @@ unsigned char rateNumberShowUpdateStatePage(unsigned char rate)
     return 0;
 }
 
+unsigned char APMShowUpdateStatePage(unsigned int apm)
+{
+    showFuncNumberValuelist[1] = apm;
+    upadtaStatePageShow(NULL, showFuncNumber);
+    return 0;
+}
+
 //第二个功能改变的时候更新显示，
 unsigned char upadtaStatePageShow(lv_obj_t* T, unsigned char v)
 {
@@ -142,6 +149,8 @@ unsigned char upadtaStatePageShow(lv_obj_t* T, unsigned char v)
         sprintf(tempValue, "%d", showFuncNumberValuelist[v]);
         lv_label_set_text(tName, showFuncNumberList[v]);
         showFuncNumber = v;
+        unsigned char dataSaveStatePageFunction(unsigned char v);
+        dataSaveStatePageFunction(showFuncNumber);
         lv_label_set_text(tValue, tempValue);
     }
     return 0;
@@ -251,7 +260,7 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
     lv_obj_set_style_radius(t, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     t = lv_label_create(FuncSetActiveTabList[0]);
-    lv_label_set_text(t, "B");
+    lv_label_set_text(t, "***");
     lv_obj_set_size(t, 50, 30);
     lv_obj_align(t, LV_ALIGN_CENTER, 0, 12);
 
@@ -281,7 +290,7 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
     lv_obj_set_style_radius(t, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     t = lv_label_create(FuncSetActiveTabList[1]);
-    lv_label_set_text(t, "90");
+    lv_label_set_text(t, "***");
     lv_obj_set_size(t, 50, 30);
     lv_obj_align(t, LV_ALIGN_CENTER, 0, 12);
 
@@ -311,7 +320,7 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
     lv_obj_set_style_radius(t, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     t = lv_label_create(FuncSetActiveTabList[2]);
-    lv_label_set_text(t, "125");
+    lv_label_set_text(t, "***");
     lv_obj_set_size(t, 50, 30);
     lv_obj_align(t, LV_ALIGN_CENTER, 0, 12);
 
@@ -368,6 +377,8 @@ lv_obj_t* FK64UIStatePageinit(lv_obj_t* temp)
     lv_obj_set_style_border_color(T, lv_color_make(0xff, 0, 0), 0);
     lv_obj_set_style_border_width(T, 0, 0);
     lv_obj_set_style_pad_all(T, 0, 0);
+    unsigned char dataSaveGetStatePageFunction(void);
+    showFuncNumber = dataSaveGetStatePageFunction();
 
     lv_obj_t* tabview = lv_tabview_create(T, LV_DIR_RIGHT, 2);          //上下两级菜单
     lv_obj_set_size(tabview, 160, 78);
@@ -381,6 +392,7 @@ lv_obj_t* FK64UIStatePageinit(lv_obj_t* temp)
 
     pageInfo* tempPage =  FK64UIStatePageShow(tabview);
     FK64UIStatePageFuncSet(tabview, tempPage);
+   
     return T;
 }
 

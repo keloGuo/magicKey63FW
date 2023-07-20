@@ -9,7 +9,10 @@ add_compile_options(-Wall
         -Wno-format          # int != int32_t as far as the compiler is concerned because gcc has int32_t as long int
         -Wno-unused-function # we have some for the docs that aren't called
         -Wno-maybe-uninitialized -O3
+        
         )
+ 
+#add_link_options( -Wl,--section-start=.config_addr=0x10020000)
 
 pico_sdk_init()
 
@@ -32,12 +35,13 @@ include_directories(./FK64UI)
 include_directories(./lib/cJson) 
 include_directories(./lvglPort) 
 
-add_definitions(-DDUAL_CONFIG=1)
-
+add_definitions(-DDUAL_CONFIG=1) 
+add_definitions(-DPICO_FLASH_SPI_CLKDIV=2)
 add_executable(firmware 
   main.c
   keymap.c 
   dataSaveModel.c
+  apmCount.c
   ./lvglPort/lv_port_disp.c
 )
 
@@ -45,4 +49,4 @@ target_include_directories(firmware PUBLIC . ${PICO_SDK_PATH}/lib/tinyusb/lib/ne
 target_link_libraries(firmware pico_stdlib pico_multicore tinyusb_device rndis userUsb keyboardScan st7735 lvgl FK64UI hardware_flash littleFs cjson)
 pico_enable_stdio_usb(firmware 0)    # Route stdio
 pico_enable_stdio_uart(firmware 1)   # to the UART
-pico_add_extra_outputs(firmware)     # create map/bin/hex file etc.
+pico_add_extra_outputs(firmware)     # create map/bin/hex file etc. 

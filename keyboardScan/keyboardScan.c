@@ -78,13 +78,15 @@ void keyboardScanStart(uint sm, uint pin, unsigned short *capture_buf)
     uint offset = pio_add_program(pio, &keyboardScan_program);
     keyboardScan_program_init(pio, sm, offset, pin);
     //pio_sm_set_clkdiv_int_frac(pio,sm,31,0x40);
-    pio_sm_set_clkdiv_int_frac(pio,sm,6250,0); // 100us 一行。0.5ms一个键盘 4个全键盘处理一次， 500 * 80 40000hz ，整个键盘的扫描频率是500hz
+    //pio_sm_set_clkdiv_int_frac(pio,sm,6250,0); //
+    pio_sm_set_clkdiv_int_frac(pio,sm,25000,0); //
     keyboardScanDmaInit(pio,sm,capture_buf);
     pio_sm_set_enabled(pio, sm, true);
 }
 //500k 每秒字节，可以用DMA ，但是CPU处理不过来啊
 
-unsigned char keyboardScanBuffErroHandle(void)
+//整个键盘的扫描率是4K 单个按键的扫描率是 320k
+unsigned char  __not_in_flash_func(keyboardScanBuffErroHandle)(void)
 {
     if((void *)(dma_channel_hw_addr(data_chan)->write_addr) != NULL) return 0;  //肯定是停了
 
@@ -128,61 +130,59 @@ unsigned char keyboardScanBuffErroHandle(void)
 //找出变换的值
 static unsigned short keyboardScanDataOld[5] = {0xffff,0xffff,0xffff,0xffff,0xffff};          //之前的状态
 //缓存最近4次的数据，用DMA操作，用ring功能，是自动环形缓冲。数组长度是20就够，但是ring功能需要地址对齐
-static unsigned short keyboardScanDataTemp[32]  __attribute__((aligned(32))) = {0xffff}; 
+static unsigned short keyboardScanDataTemp[8]  __attribute__((aligned(16))) = {0xffff};  //消抖用的数据缓存
 
 //初始化键盘扫描
 unsigned char keyboardScanInit(void)
 {
     //printf("keyboardScanInit =%x %x %x %x %x\r\n", &dataCount.dataCountFlag,&(dataCount.FillData[0]),&(dataCount.FillData[1]),&(dataCount.dmaBuffAddr[0]),&(dataCount.dmaBuffAddr[1]));
     keyboardScanStart(0, 7,dmaBuff);
-    memset((char *)keyboardScanDataTemp , 0xff,64);
+    memset((char *)keyboardScanDataTemp , 0xff,16);
     return 0;
-}
-
-void KeyMapPrintf(unsigned short *data)
-{
-    for(int i=0;i<5;i++)
-    {
-        printf("%04x ",data[i]);
-    }
-    printf("\r\n");
 }
 
 unsigned short *getkeyMatrixData(void)
 {
     return keyboardScanDataOld;
 }
-unsigned char encoderScan(unsigned short a,unsigned short b);
-unsigned char encoderKeyScan(unsigned char newStete);
+//APM 统计功能。
+/*
+    这里只管统计，
+    开一个一秒的定时器
+    每秒读取一次上一秒的按键数量，清除
+*/
 
-unsigned char keyboardScanDataHandleOne(unsigned short *data)
+unsigned short APMbuff[5] = {0xffff,0xffff,0xffff,0xffff,0xffff};
+
+unsigned char __not_in_flash_func(encoderScan)(unsigned short a,unsigned short b);
+unsigned char __not_in_flash_func(encoderKeyScan)(unsigned char newStete);
+unsigned char __not_in_flash_func(encoderScanKeyboard)(unsigned short a,unsigned short b,unsigned short *p);
+unsigned char __not_in_flash_func(AMPstatistics)(unsigned short *p);
+
+//
+
+//消抖两个周期，如果太短就需要减小刷新率
+unsigned char  __not_in_flash_func(keyboardScanDataHandleOne)(unsigned short *data) 
 {
-//    KeyMapPrintf(data);
     for(int i =0; i < 5; i++)
     {
-        unsigned short filter = keyboardScanDataTemp[i] & keyboardScanDataTemp[i + 8] & keyboardScanDataTemp[i + 16]  & keyboardScanDataTemp[i + 24]; //新的松开数据，软件滤波结果
-        unsigned short temp = filter & data[i]; //新的值是松开，滤波值也是松开的，才是松开的
-//        unsigned short change = temp ^ keyboardScanDataOld[i];  //其实我们可能不用关心是那个有变化，只要有变化就把新值同步给PC就就好，                 
+        unsigned short temp = keyboardScanDataTemp[i] & data[i]; //旧的原始值，与上新值
+        //unsigned short temp = filter & data[i]; //新的值是松开，滤波值也是松开的，才是松开的     
+        APMbuff[i] =  temp ^ keyboardScanDataOld[i];
         keyboardScanDataOld[i] = temp;      //更新旧值
-        
-        // for(int j = 0;j<16;j++) //debug 用的
-        // {
-        //     if(change & (0x0001 << j)) 
-        //     {
-        //         printf("key %02d %02d %c\r\n",i,j ,temp & (0x0001 << j) ? 'u' : 'd');
-        //     }
-        // }
-    } 
 
-    //(keyboardScanDataOld[1] & 0x4000) == 0  下 这里需要优先处理按键。
+    }
+
+    keyboardScanDataOld[0] |= 0x8000;
+    keyboardScanDataOld[2] |= 0x8000;
+
     encoderKeyScan((keyboardScanDataOld[1] & 0x4000) != 0);   //处理编码器 按键
     encoderScan(keyboardScanDataOld[0]&0x4000,keyboardScanDataOld[2]&0x4000);                   //处理编码器 旋钮 ab相
-    {
-        static unsigned char count = 0;
-        memcpy((char *)(keyboardScanDataTemp + (count *8)),(char *)data,10);
-        count ++;
-        count = count % 4;
-    }
+    encoderScanKeyboard(keyboardScanDataTemp[0]&0x8000,keyboardScanDataTemp[2]&0x8000,keyboardScanDataOld); 
+
+    AMPstatistics(APMbuff);
+
+    memcpy((char *)(keyboardScanDataTemp),(char *)data,10);
 
     return 0;
 }
@@ -198,8 +198,25 @@ unsigned char dmaHandle(void)
         dma_channel_set_write_addr(count_chan,dataCount.dataCountBuff,false);
         dataCount.dataCountBuff[0] = 1;
         keyboardScanDataHandleOne(((dma_channel_hw_addr(data_chan)->write_addr) > (uint32_t)(dmaBuff + PIO_BUFF_LEN))?(dmaBuff + PIO_BUFF_LEN):(dmaBuff));
-
     }
     return 0;
 }
 
+
+// unsigned char goUF2Boot(void)
+// {
+// 	gpio_init(10);
+// 	gpio_init(28);
+// 	gpio_set_dir(10, GPIO_OUT);
+// 	gpio_put(10, 0); 
+
+// 	gpio_set_dir(28, GPIO_IN);
+// 	gpio_pull_up(28);
+	
+// 	if(gpio_get(28) == 0)
+// 	{
+// 		reset_usb_boot(0, 0);
+// 		while(1);
+// 	}
+// 	return 0;
+// }
