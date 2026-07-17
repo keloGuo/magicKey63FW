@@ -43,9 +43,6 @@ static unsigned char spiDmaInit(void)
     // Destination pointer // Source pointer // Number of transfers // Start immediately
     dma_channel_configure(spiOver_chan, &c,NULL,&spiOverflag,2,false);                        //写地址，开始写入，先不管。读地址一直是0，
 
-
-
-
     return 0;
 }
 
@@ -69,3 +66,4 @@ int getSpiDmaChan(void)
 {
     return spi_chan;
 }
+

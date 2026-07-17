@@ -1,222 +1,317 @@
-#include <stdio.h>
+  
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "keyboardscan.pio.h"
 #include "hardware/dma.h"
-#include "keyboardScan.h"
 
-//一个DMA 传输数据，完成后触发计数DMA，
-//计数DMA 完成后触发控制dma，每次写NULL，地址后后移4字节，末尾1个4字节是数据传输地址，
-//控制DMA，控制数据传输的DMA，数据传输地址，写到对应的寄存器，并开始传输。如果地址被NULL覆盖，则自动停止
+void userPrintf(const char* format, ...);
 
-#define PIO_BUFF_COUNT  2      // 2组缓存（乒乓） 必须2
-#define PIO_BUFF_LEN    20      // 每组 20 ，4次全键盘扫描 
-unsigned short dmaBuff[PIO_BUFF_LEN * PIO_BUFF_COUNT] = {0};
+#define SCAN_PIO_A                  pio0
+#define SCAN_PIO_SM_A               0
 
-typedef struct
+#define SCAN_PIO_B                  pio0
+#define SCAN_PIO_SM_B               1
+
+#define XOR_PIO                     pio0
+#define XOR_PIO_SM                  2
+
+#define DATA_SEPARATION_PIO         pio1
+#define DATA_SEPARATION_PIO_SM      0
+
+#define ENCODER_A_PIO               pio1
+#define ENCODER_A_PIO_SM            1
+
+
+//8字节最新结果
+static unsigned short dataBuff[8] __attribute__((aligned(16))) = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
+static unsigned char tempBuff[256] __attribute__((aligned(256)))= {0}; //上次生效数据
+static unsigned int encoderData[2] __attribute__((aligned(8))) = {0,0};
+
+unsigned short *getDataBuff(void)
+{   
+    return dataBuff;
+}
+
+static int Dma0Chan = 0, Dma1Chan =0,Dma2Chan =0,Dma3Chan =0,Dma4Chan =0,Dma5Chan=0,Dma6Chan=0;//
+
+unsigned short encoderAData = 0;
+void encoderCallback(int tx,unsigned char keyT);
+void dma_handler6() { 
+    dma_hw->ints1 = 0xffffffff;
+    static unsigned char encoderAbusy =0,encoderBbusy=0;
+    if((encoderData[0]  & 0x0f) == 0b0111 && encoderAbusy == 0)//左边编码器逆时针
+    {
+        encoderAData = 0x040;
+        encoderAbusy = 1;
+        // userPrintf("encoderAData =   %x\r\n",encoderAData);
+        
+    }
+    else if((encoderData[0]  & 0x0f) == 0b1011 && encoderAbusy == 0)//左边编码器顺时针
+    {   
+        encoderAData = 0x020;
+        encoderAbusy = 1;
+        // userPrintf("encoderAData =   %x\r\n",encoderAData);
+    }
+    else if((encoderData[0]  & 0x0f) == 0b0000 )
+    {
+        encoderAbusy = 0;
+    }
+
+    if((encoderData[1]  & 0x0f) == 0b0111 && encoderBbusy == 0)//右边编码器逆时针
+    {
+        encoderCallback(1,3);
+        encoderBbusy = 1;
+        // userPrintf("encoderBData =   %x\r\n",encoderData[1]);
+    }
+    else if((encoderData[1]  & 0x0f) == 0b1011 && encoderBbusy == 0)//右边编码器顺时针
+    {
+        encoderBbusy = 1;
+        encoderCallback(-1,3);
+        // userPrintf("encoderBData =   %x\r\n",encoderData[1]);
+    }
+    else if((encoderData[1]  & 0x0f) == 0b0000 )
+    {
+        encoderBbusy = 0;
+    }
+
+    dma_start_channel_mask(1u << Dma5Chan);//
+}
+
+void keyboardScanDmaInit(void)
 {
-    uint32_t dataCountFlag;                                 //NULL,计数的时候把这个往后面搬                                      
-    uint32_t FillData[4 - ((PIO_BUFF_COUNT) % 4)];          //占位子的，为了让dmaBuffAddr 16字节对齐。（需要用到dma的ring功能）  
-    uint32_t dataCountBuff[PIO_BUFF_COUNT-1];               //数据计数buff，非NULL的时候，没有数据，NULL的时候有数据。           
-    unsigned short *dmaBuffAddr[PIO_BUFF_COUNT];		    //data DMA的写地址，如果计数来不及清空，就会写到这里，这里被写NULL，DMA自动停止， 
-}  sDmaData;
-
-sDmaData dataCount __attribute__((aligned(16))) = {(uint32_t)NULL,{0},{1},{dmaBuff,dmaBuff+PIO_BUFF_LEN}}; //__attribute__((aligned(16))) 确保整个结构体是16字节对齐
-
-//int a ;
-
-static int data_chan = 0;
-static int ctrl_chan = 0;
-static int count_chan = 0;
-
-unsigned char keyboardScanDmaInit(PIO pio, uint sm, unsigned short *capture_buf)
-{
-    ctrl_chan = dma_claim_unused_channel(true);                                             //dma 控制通道                     
-    data_chan = dma_claim_unused_channel(true);                                             //dma 数据通道
-    count_chan = dma_claim_unused_channel(true);                                            //dma 数据通道
+    Dma0Chan = dma_claim_unused_channel(true);       
+    Dma1Chan = dma_claim_unused_channel(true);                       
+    Dma2Chan = dma_claim_unused_channel(true);                                            //
     
-    dma_channel_config   c = dma_channel_get_default_config(data_chan);                     //数据通道DMA
-    channel_config_set_read_increment(&c, false);                                           //读地址不用变，PIO FIFO 地址
-    channel_config_set_write_increment(&c, true);                                           //写地址自加
-    channel_config_set_transfer_data_size(&c,DMA_SIZE_16);                                  //每次2个字节
-    channel_config_set_dreq(&c, pio_get_dreq(pio, sm, false));                              //设置触发
-    channel_config_set_chain_to(&c, count_chan);                                            //传输完成触发计数通道DMA
-    channel_config_set_irq_quiet(&c, true);                                                 //写入NULL的时候，停止。
-    // Destination pointer // Source pointer // Number of transfers // Start immediately
-    dma_channel_configure(data_chan, &c,capture_buf,&pio->rxf[sm],PIO_BUFF_LEN,false);      //计数DMA
+    dma_channel_config   c = dma_channel_get_default_config(Dma0Chan);                    //
+    channel_config_set_read_increment(&c, true);                                          //
+    channel_config_set_write_increment(&c, false);                                        //
+    channel_config_set_transfer_data_size(&c,DMA_SIZE_8);                                 //
+    channel_config_set_dreq(&c, pio_get_dreq(SCAN_PIO_A, SCAN_PIO_SM_A, true));                       //
+    channel_config_set_chain_to(&c, Dma1Chan);    
+    channel_config_set_irq_quiet(&c, true);                                               //
+    channel_config_set_ring(&c, false,8);   
+    dma_channel_configure(Dma0Chan, &c,&SCAN_PIO_A->txf[SCAN_PIO_SM_A],tempBuff,2,false);                    //
 
-    c = dma_channel_get_default_config(count_chan);                                         //计数通道
-    channel_config_set_read_increment(&c, false);                                           //读地址不用变
-    channel_config_set_write_increment(&c, true);                                           //写地址自加
-    channel_config_set_transfer_data_size(&c,DMA_SIZE_32);                                  //每次4个字节
-    channel_config_set_chain_to(&c, ctrl_chan);                                             //传输完成触发控制通道DMA
-    // Destination pointer // Source pointer // Number of transfers // Start immediately
-    dma_channel_configure(count_chan, &c,dataCount.dataCountBuff,&dataCount.dataCountFlag,1,false);      //计数DMA
+    
+    c = dma_channel_get_default_config(Dma1Chan);                                         // 
+    channel_config_set_read_increment(&c, false);                                         //
+    channel_config_set_write_increment(&c, false);                                        //
+    channel_config_set_transfer_data_size(&c,DMA_SIZE_8);                                 //
+    channel_config_set_dreq(&c, pio_get_dreq(SCAN_PIO_A, SCAN_PIO_SM_A, false));                             // 
+    channel_config_set_chain_to(&c, Dma2Chan);    
+    channel_config_set_irq_quiet(&c, true);                                               //
+    dma_channel_configure(Dma1Chan, &c,&XOR_PIO->txf[XOR_PIO_SM],&SCAN_PIO_A->rxf[SCAN_PIO_SM_A],3,false);               //
+    
+//    01 00 00  01 00 00  01 00 00  01 00 00  01 00 00  01 00 00  01 00 00  01 00 00   01 00 00  01 00 00  01 00 00  00 00 00  01 00 00  01 00 00  01 00 00  01 00 00
 
-    c = dma_channel_get_default_config(ctrl_chan);           
-    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
-    channel_config_set_read_increment(&c, true);
-    channel_config_set_write_increment(&c, false);  
-    channel_config_set_ring(&c, false, 3);
-    // Initial write address // Initial read address // Halt after each control block // Don't start yet
-    dma_channel_configure(ctrl_chan, &c, &dma_hw->ch[data_chan].al2_write_addr_trig, dataCount.dmaBuffAddr,1,false); //只修改了地址。
+    c = dma_channel_get_default_config(Dma2Chan);                                         //
+    channel_config_set_read_increment(&c, false);                                         //
+    channel_config_set_write_increment(&c, false);                                        //
+    channel_config_set_transfer_data_size(&c,DMA_SIZE_8);                                 //
+    channel_config_set_dreq(&c, pio_get_dreq(XOR_PIO,XOR_PIO_SM, false));                            //
+    channel_config_set_chain_to(&c, Dma0Chan);    
+    channel_config_set_irq_quiet(&c, true);                                               //
+    dma_channel_configure(Dma2Chan, &c,&DATA_SEPARATION_PIO->txf[DATA_SEPARATION_PIO_SM],&XOR_PIO->rxf[XOR_PIO_SM],2,false);              // 
+//01 00  01 00  01 00  01 00  01 00  01 00  01 00  01 00   01 00  01 00  01 00  00 00  01 00  01 00  01 00  01 00 
+ 
+    Dma3Chan = dma_claim_unused_channel(true);                                            //
+    Dma4Chan = dma_claim_unused_channel(true);                                            //
 
-    dma_start_channel_mask(1u << ctrl_chan);
+    c = dma_channel_get_default_config(Dma3Chan);                                         //
+    channel_config_set_read_increment(&c, false);                                         //
+    channel_config_set_write_increment(&c, true);                                         //
+    channel_config_set_transfer_data_size(&c,DMA_SIZE_8);                                 //
+    channel_config_set_dreq(&c, pio_get_dreq(DATA_SEPARATION_PIO, DATA_SEPARATION_PIO_SM, false));             //
+//    channel_config_set_irq_quiet(&c, true);                                             //
+    channel_config_set_chain_to(&c, Dma4Chan);    
+    channel_config_set_ring(&c, true,8);  
+    dma_channel_configure(Dma3Chan, &c,tempBuff,&DATA_SEPARATION_PIO->rxf[DATA_SEPARATION_PIO_SM],32,false);    // 
 
-    return 0;
+    c = dma_channel_get_default_config(Dma4Chan);                                         //
+    channel_config_set_read_increment(&c, false);                                         //
+    channel_config_set_write_increment(&c, true);                                         //
+    channel_config_set_transfer_data_size(&c,DMA_SIZE_16);                                //
+    channel_config_set_dreq(&c, pio_get_dreq(DATA_SEPARATION_PIO, DATA_SEPARATION_PIO_SM, false));               //
+    channel_config_set_irq_quiet(&c, true);                                               //
+    channel_config_set_chain_to(&c, Dma3Chan);    
+    channel_config_set_ring(&c, true,4);  
+    dma_channel_configure(Dma4Chan, &c,dataBuff,&DATA_SEPARATION_PIO->rxf[DATA_SEPARATION_PIO_SM],1,false);      //
+
+    Dma5Chan = dma_claim_unused_channel(true);                                            //
+    Dma6Chan = dma_claim_unused_channel(true);                                            //
+
+    c = dma_channel_get_default_config(Dma5Chan);                                         //
+    channel_config_set_read_increment(&c, false);                                         //
+    channel_config_set_write_increment(&c, false);                                        //
+    channel_config_set_transfer_data_size(&c,DMA_SIZE_16);                                //
+    channel_config_set_dreq(&c, pio_get_dreq(ENCODER_A_PIO, ENCODER_A_PIO_SM, true));     // 需要数据就给 
+    channel_config_set_irq_quiet(&c, true);                                               //
+    channel_config_set_chain_to(&c, Dma6Chan);    
+    dma_channel_configure(Dma5Chan, &c,&ENCODER_A_PIO->txf[ENCODER_A_PIO_SM],&dataBuff[4],1,false);                     // 复制数据到TX
+
+    c = dma_channel_get_default_config(Dma6Chan);                                         //
+    channel_config_set_read_increment(&c, false);                                         //
+    channel_config_set_write_increment(&c, true);                                         //
+    channel_config_set_transfer_data_size(&c,DMA_SIZE_32);                                                        //
+    channel_config_set_dreq(&c, pio_get_dreq(ENCODER_A_PIO, ENCODER_A_PIO_SM, false));                            //
+    //channel_config_set_irq_quiet(&c, true);                                                                     //
+    //channel_config_set_chain_to(&c, Dma5Chan);
+    channel_config_set_ring(&c, true,3);   
+    dma_channel_configure(Dma6Chan, &c,encoderData,&ENCODER_A_PIO->rxf[ENCODER_A_PIO_SM],2,false);                     //&ENCODER_B_PIO->txf[ENCODER_B_PIO_SM]
+
+    dma_channel_set_irq1_enabled(Dma6Chan, true);
+    irq_set_exclusive_handler(DMA_IRQ_1, dma_handler6);
+    irq_set_enabled(DMA_IRQ_1, true);
+
+    dma_start_channel_mask(1u << Dma0Chan | 1u << Dma3Chan | 1u << Dma5Chan);//
 }
 
+//这里16个输入
+void keyboardScan_program_init(PIO pio, uint sm, uint offset, uint pin) {
+    for(int i =0;i<16;i++)
+    {
+        pio_gpio_init(pio, pin+i);
+        gpio_pull_down(pin+i);
+    }
 
-//开始扫描键盘，配置PIO，DMA
-void keyboardScanStart(uint sm, uint pin, unsigned short *capture_buf)
-{    
-    PIO pio = pio0;
-    uint offset = pio_add_program(pio, &keyboardScan_program);
-    keyboardScan_program_init(pio, sm, offset, pin);
-    //pio_sm_set_clkdiv_int_frac(pio,sm,31,0x40);
-    //pio_sm_set_clkdiv_int_frac(pio,sm,6250,0); //
-    pio_sm_set_clkdiv_int_frac(pio,sm,25000,0); //
-    keyboardScanDmaInit(pio,sm,capture_buf);
-    pio_sm_set_enabled(pio, sm, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 16, false);
+    pio_sm_config c = keyboardScan_program_get_default_config(offset);
+    sm_config_set_in_pins(&c, pin);
+
+    sm_config_set_out_shift(&c,true,false,32);
+    sm_config_set_in_shift(&c,false,false,32);
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_clkdiv_int_frac(pio,sm,512,0); 
 }
-//500k 每秒字节，可以用DMA ，但是CPU处理不过来啊
 
-//整个键盘的扫描率是4K 单个按键的扫描率是 320k
-unsigned char  __not_in_flash_func(keyboardScanBuffErroHandle)(void)
+//5个输出
+void keyboardScanPinSet_program_init(PIO pio, uint sm, uint offset, uint pin) {
+    for(int i =0;i<5;i++)
+    {
+        pio_gpio_init(pio, pin+i);
+    }
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 5, true);
+    pio_sm_config c = keyboardScanPinSet_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+
+    sm_config_set_out_shift(&c,true,false,32);
+    sm_config_set_in_shift(&c,true,false,32);
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_clkdiv_int_frac(pio,sm,1,0); 
+}
+
+//异或输出
+void xor_program_init(PIO pio, uint sm, uint offset) {
+    pio_sm_config c = xor_program_get_default_config(offset);
+    sm_config_set_out_shift(&c,true,true,8);
+    sm_config_set_in_shift(&c,false,true,1);
+    pio_sm_init(pio, sm, offset+2, &c);
+    pio_sm_set_clkdiv_int_frac(pio,sm,1,0); 
+}
+
+//输出格式处理
+void DataSeparation_program_init(PIO pio, uint sm, uint offset) {
+    pio_sm_config c = DataSeparation_program_get_default_config(offset);
+    sm_config_set_out_shift(&c,true,false,8);
+    sm_config_set_in_shift(&c,false,true,8);
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_clkdiv_int_frac(pio,sm,1,0); 
+}
+
+//编码器预处理
+void encoderA_program_init(PIO pio, uint sm, uint offset) {
+    pio_sm_config c = encoderA_program_get_default_config(offset);
+    sm_config_set_out_shift(&c,true,false,32);
+    sm_config_set_in_shift(&c,false,false,32);
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_clkdiv_int_frac(pio,sm,1,0); 
+}
+
+uint offset,offset2,offset3,offset4,offset5;
+
+void keyboardScanStart(void)
 {
-    if((void *)(dma_channel_hw_addr(data_chan)->write_addr) != NULL) return 0;  //肯定是停了
+    offset = pio_add_program(SCAN_PIO_A, &keyboardScan_program);
+    keyboardScan_program_init(SCAN_PIO_A, SCAN_PIO_SM_A, offset, 13);
+    
+    offset2 = pio_add_program(SCAN_PIO_B, &keyboardScanPinSet_program);
+    keyboardScanPinSet_program_init(SCAN_PIO_B, SCAN_PIO_SM_B, offset2, 7); 
 
-    printf("temp keyboardScanBuffErroHandle stop\r\n");
+    offset3 = pio_add_program(XOR_PIO, &xor_program);
+    xor_program_init(XOR_PIO, XOR_PIO_SM, offset3);
 
-    dataCount.dmaBuffAddr[0] = dmaBuff;
-    dataCount.dmaBuffAddr[1] = dmaBuff+PIO_BUFF_LEN;
-    dataCount.dataCountBuff[0] = 1;
+    offset4 = pio_add_program(DATA_SEPARATION_PIO, &DataSeparation_program);
+    DataSeparation_program_init(DATA_SEPARATION_PIO, DATA_SEPARATION_PIO_SM, offset4);
 
-    dma_channel_set_write_addr(count_chan,dataCount.dataCountBuff,false); //这里还需要重新启动 pio，不然位置对不上
-    dma_start_channel_mask(1u << ctrl_chan);    
+    offset5 = pio_add_program(ENCODER_A_PIO, &encoderA_program);
+    encoderA_program_init(ENCODER_A_PIO, ENCODER_A_PIO_SM, offset5);
 
-    return 1;
+    keyboardScanDmaInit( );
+    pio_sm_set_enabled(SCAN_PIO_A, SCAN_PIO_SM_A, true); // 0 0 
+    pio_sm_set_enabled(SCAN_PIO_B, SCAN_PIO_SM_B, true); // 0 1
+    pio_sm_set_enabled(XOR_PIO, XOR_PIO_SM, true);       // 0 2
+    pio_sm_set_enabled(DATA_SEPARATION_PIO, DATA_SEPARATION_PIO_SM, true);      //1 0      
+    pio_sm_set_enabled(ENCODER_A_PIO, ENCODER_A_PIO_SM, true);                  //1 1                                                                                                                                                                  
 }
 
-
-
-//4M 4000000
-/*
-大前提：
-    1. 只有松开需要滤波，按下的时候，有就触发。
-    2. 滤波数据延后一个周期。
-
-    旧值（按下0，松开1） old
-    新值（按下0，松开1）new
-    4个缓存里面的值，全与，是1的，有效松开  filter //滤波值里面找松开的
-    这里的1 才是真的1
-
-    temp = filter & new; //新值是松开的，滤波值也是送开的，结果就是松开的
-
-    有改变的值 change = temp ^  old
-    changeUp = temp & change;
-    changeDown = (~temp) & change;
-    old = temp;
-
-
-    新值备份到缓存里，用于软件滤波，
-*/
-//键盘扫描数据处理，每次传一整个键盘的扫描数据进来
-//传入的数据是，空闲是1，按下是0，
-//找出变换的值
-static unsigned short keyboardScanDataOld[5] = {0xffff,0xffff,0xffff,0xffff,0xffff};          //之前的状态
-//缓存最近4次的数据，用DMA操作，用ring功能，是自动环形缓冲。数组长度是20就够，但是ring功能需要地址对齐
-static unsigned short keyboardScanDataTemp[8]  __attribute__((aligned(16))) = {0xffff};  //消抖用的数据缓存
 
 //初始化键盘扫描
 unsigned char keyboardScanInit(void)
-{
-    //printf("keyboardScanInit =%x %x %x %x %x\r\n", &dataCount.dataCountFlag,&(dataCount.FillData[0]),&(dataCount.FillData[1]),&(dataCount.dmaBuffAddr[0]),&(dataCount.dmaBuffAddr[1]));
-    keyboardScanStart(0, 7,dmaBuff);
-    memset((char *)keyboardScanDataTemp , 0xff,16);
-    return 0;
-}
-
-unsigned short *getkeyMatrixData(void)
-{
-    return keyboardScanDataOld;
-}
-//APM 统计功能。
-/*
-    这里只管统计，
-    开一个一秒的定时器
-    每秒读取一次上一秒的按键数量，清除
-*/
-
-unsigned short APMbuff[5] = {0xffff,0xffff,0xffff,0xffff,0xffff};
-
-unsigned char __not_in_flash_func(encoderScan)(unsigned short a,unsigned short b);
-unsigned char __not_in_flash_func(encoderKeyScan)(unsigned char newStete);
-unsigned char __not_in_flash_func(encoderScanKeyboard)(unsigned short a,unsigned short b,unsigned short *p);
-unsigned char __not_in_flash_func(AMPstatistics)(unsigned short *p);
-
-//
-
-//消抖两个周期，如果太短就需要减小刷新率
-unsigned char  __not_in_flash_func(keyboardScanDataHandleOne)(unsigned short *data) 
-{
-    for(int i =0; i < 5; i++)
+{ 
+    for (int i = 0; i < 256; i++) 
     {
-        unsigned short temp = keyboardScanDataTemp[i] & data[i]; //旧的原始值，与上新值
-        //unsigned short temp = filter & data[i]; //新的值是松开，滤波值也是松开的，才是松开的     
-        APMbuff[i] =  temp ^ keyboardScanDataOld[i];
-        keyboardScanDataOld[i] = temp;      //更新旧值
-
+        tempBuff[i]= 0;
     }
-
-    keyboardScanDataOld[0] |= 0x8000;
-    keyboardScanDataOld[2] |= 0x8000;
-
-    encoderKeyScan((keyboardScanDataOld[1] & 0x4000) != 0);   //处理编码器 按键
-    encoderScan(keyboardScanDataOld[0]&0x4000,keyboardScanDataOld[2]&0x4000);                   //处理编码器 旋钮 ab相
-    encoderScanKeyboard(keyboardScanDataTemp[0]&0x8000,keyboardScanDataTemp[2]&0x8000,keyboardScanDataOld); 
-
-    AMPstatistics(APMbuff);
-
-    memcpy((char *)(keyboardScanDataTemp),(char *)data,10);
-
+    
+    keyboardScanStart();
     return 0;
 }
 
-unsigned char dmaHandle(void) 
+unsigned char TestPrintf(void)
 {
-    // unsigned int writeAddrTemp =  dma_channel_hw_addr(data_chan)->write_addr;
-    // printf("writeAddrTemp = %x %x %x %x %d \r\n",writeAddrTemp, dataCount.dataCountBuff[0],dataCount.dmaBuffAddr[0],dataCount.dmaBuffAddr[1],dma_channel_is_busy(data_chan));
-    if(keyboardScanBuffErroHandle()) return 0; //buff 不够用了
-
-    if(dataCount.dataCountBuff[0] == (uint32_t)NULL) 
-    {
-        dma_channel_set_write_addr(count_chan,dataCount.dataCountBuff,false);
-        dataCount.dataCountBuff[0] = 1;
-        keyboardScanDataHandleOne(((dma_channel_hw_addr(data_chan)->write_addr) > (uint32_t)(dmaBuff + PIO_BUFF_LEN))?(dmaBuff + PIO_BUFF_LEN):(dmaBuff));
+    static unsigned short tempOld[8] = {0};
+    if(memcmp(tempOld,dataBuff,16)) 
+    {  
+        userPrintf("%04x %04x %04x %04x %04x\n",dataBuff[0],dataBuff[1],dataBuff[2],dataBuff[3],dataBuff[4]);
+        memcpy(tempOld,dataBuff,16);
     }
     return 0;
 }
 
+bool encoderKeyCleck(repeating_timer_t *rt)
+{
+    static unsigned char timeCount = 0;
 
-// unsigned char goUF2Boot(void)
-// {
-// 	gpio_init(10);
-// 	gpio_init(28);
-// 	gpio_set_dir(10, GPIO_OUT);
-// 	gpio_put(10, 0); 
+    if((dataBuff[4]&0x8000))
+    {
+        timeCount ++;
 
-// 	gpio_set_dir(28, GPIO_IN);
-// 	gpio_pull_up(28);
-	
-// 	if(gpio_get(28) == 0)
-// 	{
-// 		reset_usb_boot(0, 0);
-// 		while(1);
-// 	}
-// 	return 0;
-// }
+        if(timeCount == 100)
+        {
+            encoderCallback(0,2);//触发长按，
+        }
+    }
+    else
+    {
+        // if(timeCount != 0) userPrintf("timeCount =   %x\r\n",timeCount);
+        if((timeCount > 0) && (timeCount < 50))
+        { 
+            encoderCallback(0,1);//触发短按，
+        }
+         timeCount = 0;
+    }
+    return 1;
+}
+
+struct repeating_timer encoderKeyCleckTimer;
+unsigned char encoderKeyCleckInit(void)
+{
+    add_repeating_timer_ms(10,encoderKeyCleck,0,&encoderKeyCleckTimer);
+    return 0;
+}

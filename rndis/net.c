@@ -6,8 +6,10 @@ unsigned char getKeyboardMap(struct mg_http_message *hm,struct mg_connection *c)
 unsigned char setKeyValue(struct mg_http_message *hm,struct mg_connection *c);
 unsigned char webFileUpdate(struct mg_http_message *hm,struct mg_connection *c);
 unsigned char webFileDelete(struct mg_connection *c);
-
-const char *mg_unpack(const char *name, size_t *size, time_t *mtime) ;
+unsigned char webFileUpdateP(struct mg_http_message *hm,struct mg_connection *c);
+unsigned char webFileUpdatePpakgEnter(struct mg_http_message *hm,struct mg_connection *c);
+unsigned char webFileUpdatePpakgStart(struct mg_http_message *hm,struct mg_connection *c);
+const char *mg_unpack(const char *name, size_t *size, time_t *mtime) ;\
 static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
   if (ev == MG_EV_HTTP_MSG) {
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
@@ -29,6 +31,18 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 	{
 		webFileDelete(c);
 	} 
+	else if(mg_http_match_uri(hm, "/api/updateP"))
+	{
+		webFileUpdateP(hm,c);
+	}
+	else if (mg_http_match_uri(hm, "/api/webFileUpdatePpakgEnter"))
+	{
+		webFileUpdatePpakgEnter(hm,c);
+	}
+	else if (mg_http_match_uri(hm, "/api/updateStart"))
+	{
+		webFileUpdatePpakgStart(hm,c);
+	}
 	else 
 	{
 		struct mg_http_serve_opts opts;

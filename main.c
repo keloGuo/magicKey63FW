@@ -12,15 +12,21 @@
 unsigned char keyboardReportInit(void);
 unsigned char rndisInit(void);
 unsigned char mgLoops(void);
-unsigned char dmaHandle(void);
 unsigned char keyboardScanInit(void);
 unsigned char st7735Int(void);
-unsigned char UIdataUpdate(void);
+unsigned char uiDataUpdateInit(void);
 unsigned char encoderTmierInit(void);
 unsigned char dataSaveInit(void);
 void core1_main(void);
-void FK64UI(void);
+void magic63UI(void);
 unsigned char apmTimerInit(void);
+unsigned char bootCleck(void);
+unsigned char TestPrintf(void);
+unsigned char encoderKeyCleckInit(void);
+unsigned char keymap2HidReport(void);
+unsigned char ws2812Init(void);
+unsigned char tftBackLightCtrlInit(void);
+unsigned char apmUpdataCleck(void);
 
 #define PLL_SYS_KHZ (250 * 1000)
 unsigned char sysClockInit(void)
@@ -29,55 +35,91 @@ unsigned char sysClockInit(void)
 	printf("clock_get_hz = %d \r\n",clock_get_hz(clk_sys));
 	return 0;
 }
-// void __not_in_flash_func(some_function_name)(int arg1, int arg2) {
-//     // ...
-// }
-unsigned char  __not_in_flash_func(testRamFunc)(char *p)
-{
-	printf("\r\ntestRamFunc %s\r\n",p);
-	return 1;
-}
 
+unsigned char tftBackLightTest(void)
+{
+	gpio_init(12);
+    gpio_set_dir(12, GPIO_OUT);
+	gpio_put(12,1);
+	return 0;
+}
+bool encoderProcess(repeating_timer_t *rt) ;
+bool UIdataUpdate(repeating_timer_t *rt);
 int main(void) 
 {
 	sysClockInit();
 	stdio_init_all();
-	
-	printf("testRamFunc %d %08x \r\n",testRamFunc("12345"),testRamFunc);
+	multicore_lockout_victim_init();
+	printf("cpu lvgl id %d \r\n",*((unsigned int *)(0xd0000000)));
+	printf("clock_get_hz = %d \r\n",clock_get_hz(clk_sys));
 
 	multicore_launch_core1(core1_main);
 	dataSaveInit();
+	keymap2HidReport();
 	st7735Int();
 	lv_init();
-    lv_port_disp_init();
-	FK64UI();
+	lv_port_disp_init();
+	
+	magic63UI();
 
 	tusb_init();
 	rndisInit();			
 
-	printf("PICO_FLASH_SPI_CLKDIV = %d",PICO_FLASH_SPI_CLKDIV);
-
-	encoderTmierInit();
+	//encoderTmierInit();
 	apmTimerInit();
-    while(true)
+	//uiDataUpdateInit();
+	ws2812Init();
+
+	tftBackLightCtrlInit();
+
+    while(true) 
     {   
+		encoderProcess(NULL);
+		UIdataUpdate(NULL);
 		lv_task_handler(); 
 		mgLoops();
-		UIdataUpdate();
     }
   	return 0;
 }
-
+void cdc_task(void);
 void core1_main(void)
 {
-    multicore_lockout_victim_init();
-	keyboardReportInit();
+	multicore_lockout_victim_init();
 	keyboardScanInit();
+	sleep_ms(20);
+	bootCleck();
+	keyboardReportInit();
+	encoderKeyCleckInit();
 	for (;;) 
 	{
 		tud_task();
-		dmaHandle();
+		cdc_task();
+		// TestPrintf();
 	}
 }
 
+struct repeating_timer backLightTimer;
+
+bool backLightTimerHandle(repeating_timer_t *rt)
+{
+	gpio_init(12);
+    gpio_set_dir(12, GPIO_OUT);
+	gpio_put(12,1);
+	return 1;
+
+}
+unsigned char tftBackLightCtrlInit(void)
+{
+	add_repeating_timer_ms(60000,backLightTimerHandle,0,&backLightTimer);
+	return 0;
+}
+unsigned char tftBackLightCtrlTimerRestart(void)
+{
+	cancel_repeating_timer(&backLightTimer);
+	gpio_init(12);
+    gpio_set_dir(12, GPIO_OUT);
+	gpio_put(12,0);
+	add_repeating_timer_ms(60000,backLightTimerHandle,0,&backLightTimer);
+	return 0;
+}
 

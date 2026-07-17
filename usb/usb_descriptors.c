@@ -54,6 +54,9 @@ enum
   ITF_NUM_HID0,
   ITF_NUM_HID1,
   ITF_NUM_HID2,
+  ITF_NUM_HID3,
+  ITF_NUM_CDC_0,
+  ITF_NUM_CDC_0_DATA,
   ITF_NUM_TOTAL
 };
 
@@ -136,6 +139,45 @@ uint8_t const desc_hid_report0[] =
  
         0xC0              //   End Collection
 };
+//HID 键盘的 报表描述符
+uint8_t const desc_hid_report3[] =
+{
+
+        0x05, 0x01,       //   Usage Page (Generic Desktop),
+        0x09, 0x06,       //   Usage (Keyboard),
+        0xA1, 0x01,       //   Collection (Application),
+        // bitmap of modifiers(功能按键)
+        0x05, 0x07,       //   Usage Page (Keyboard),
+        0x95, 0x08,       //   Report Count (8),
+        0x75, 0x01,       //   Report Size  (1),
+        0x15, 0x00,       //   Logical Minimum (0),
+        0x25, 0x01,       //   Logical Maximum (1),
+        0x19, 0xE0,       //   Usage Minimum (Keyboard LeftControl),
+        0x29, 0xE7,       //   Usage Maximum (Keyboard Right GUI),
+        0x81, 0x02,       //   Input (Data, Variable, Absolute),
+        // bitmap of keys(普通按键)
+        0x05, 0x07,       //   Usage Page (Keyboard),
+        0x95, 0x78,       //   Report Count (120),
+        0x75, 0x01,       //   Report Size  (1),
+        0x15, 0x00,       //   Logical Minimum (0),
+        0x25, 0x01,       //   Logical Maximum (1),
+        0x19, 0x00,       //   Usage Minimum (0),
+        0x29, 0x65,       //   Usage Maximum (101),
+        0x81, 0x02,       //   Input (Data, Variable, Absolute),
+        // LED output report
+        0x05, 0x08,       //   Usage Page (LEDs)
+        0x95, 0x03,       //   Report Count (3)
+        0x75, 0x01,       //   Report Size  (1)
+        0x19, 0x01,       //   Usage Minimum (Num Lock   1)
+        0x29, 0x03,       //   Usage Maximum (Scroll Lock   3)
+        0x91, 0x02,       //   Output (Data,Var,Abs)
+        //output凑共1byte(无实际用处)
+        0x95, 0x05,       //   Report Count (5)
+        0x75, 0x01,       //   Report Size  (1)
+        0x91, 0x01,       //   Output (Cnst,Var,Abs)
+ 
+        0xC0              //   End Collection
+};
 
 //HID 自定义设备的报表描述符
 uint8_t const desc_hid_report1[] =
@@ -172,6 +214,7 @@ uint8_t const desc_hid_report1[] =
 	0x75, 0x01, //REPORT_SIZE (1)
 	0x95, 0x18, //REPORT_COUNT (24)
 	0x81, 0x02, //INPUT (Data,Var,Abs)输入24bit数据
+
 	0x05, 0x01, //USAGE_PAGE 用途页0x01(普通桌面)
 	0x19, 0x00, //USAGE_MINIMUM 用途最小值0x00(未定义)
 	0x29, 0x83, //USAGE_MAXIMUM 用途最大值0x83(系统唤醒)
@@ -185,7 +228,7 @@ uint8_t const desc_hid_report1[] =
 
 uint8_t const desc_hid_report2[] =
 {
-    0x05,0x01,0x09,0x02,0xA1,0x01,0x09,0x01,
+    0x05,0x01, 0x09,0x02,0xA1,0x01,0x09,0x01,
     0xA1,0x00,0x05,0x09,0x19,0x01,0x29,0x03,
     0x15,0x00,0x25,0x01,0x75,0x01,0x95,0x03,
     0x81,0x02,0x75,0x05,0x95,0x01,0x81,0x01,
@@ -193,33 +236,39 @@ uint8_t const desc_hid_report2[] =
     0x15,0x81,0x25,0x7f,0x75,0x08,0x95,0x03,
     0x81,0x06,0xC0,0xC0
 };
+extern unsigned char reportBuff[179];
 
-const uint8_t *descHid[] = {desc_hid_report0,desc_hid_report1,desc_hid_report2};
+const uint8_t *descHid[] = {desc_hid_report0,desc_hid_report1,desc_hid_report2,reportBuff};
 
+void userPrintf(const char* format, ...);
 //获取HID报表描述符的回调
 uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
 {
-  printf("tud_hid_descriptor_report_cb %d \r\n",itf);
-  if(itf > 2) return NULL;  
+  // userPrintf("tud_hid_descriptor_report_cb %d \r\n",itf);
+  if(itf > 3) return NULL;  
   return descHid[itf];
 }
 
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
-#define MAIN_CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_RNDIS_DESC_LEN +  TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_DESC_LEN)  // + TUD_MSC_DESC_LEN TUD_HID_INOUT_DESC_LEN
+#define MAIN_CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_RNDIS_DESC_LEN +  TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_CDC_DESC_LEN)  // + TUD_MSC_DESC_LEN TUD_HID_INOUT_DESC_LEN
 
-#define EPNUM_HID0        0x01
-#define EPNUM_HID1        0x02
-#define EPNUM_HID2        0x03
-#define EPNUM_NET_NOTIF   0x84
-#define EPNUM_NET_OUT     0x05
-#define EPNUM_NET_IN      0x85
+#define EPNUM_HID0          0x01
+#define EPNUM_HID1          0x02
+#define EPNUM_HID2          0x03
+#define EPNUM_HID3          0x04
+#define EPNUM_NET_NOTIF     0x85
+#define EPNUM_NET_OUT       0x06
+#define EPNUM_NET_IN        0x86
+#define EPNUM_CDC_0_NOTIF   0x87
+#define EPNUM_CDC_0_OUT     0x07
+#define EPNUM_CDC_0_IN      0x88
 
 uint8_t rndis_configuration[] =
 {
   // Config number (index+1), interface count, string index, total length, attribute, power in mA
-  TUD_CONFIG_DESCRIPTOR(CONFIG_ID_RNDIS+1, ITF_NUM_TOTAL, 0, MAIN_CONFIG_TOTAL_LEN, 0, 100),
+  TUD_CONFIG_DESCRIPTOR(CONFIG_ID_RNDIS + 1, ITF_NUM_TOTAL, 0, MAIN_CONFIG_TOTAL_LEN, 0, 100),
 
   // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
   TUD_RNDIS_DESCRIPTOR(ITF_NUM_CDC, 0, EPNUM_NET_NOTIF, 8, EPNUM_NET_OUT, EPNUM_NET_IN, CFG_TUD_NET_ENDPOINT_SIZE),
@@ -227,7 +276,9 @@ uint8_t rndis_configuration[] =
   TUD_HID_DESCRIPTOR(ITF_NUM_HID0, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report0), EPNUM_HID0 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
   TUD_HID_DESCRIPTOR(ITF_NUM_HID1, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report1), EPNUM_HID1 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
   TUD_HID_DESCRIPTOR(ITF_NUM_HID2, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report2), EPNUM_HID2 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
+  TUD_HID_DESCRIPTOR(ITF_NUM_HID3, 0, HID_ITF_PROTOCOL_NONE, sizeof(reportBuff), EPNUM_HID3 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
 
+  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 0, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
 //  TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID1, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report1), EPNUM_HID1, 0x80 | EPNUM_HID1, CFG_TUD_HID_EP_BUFSIZE, 10),
 };
 
@@ -239,7 +290,6 @@ uint8_t rndis_configuration[] =
 static uint8_t const * const configuration_arr[1] =
 {
   [CONFIG_ID_RNDIS] = rndis_configuration, 
-
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR

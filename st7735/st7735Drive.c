@@ -10,6 +10,7 @@
 
 #include "st7735Hw.h"
 
+#define ST7735A   1
 unsigned char st7735Reset(void)
 {
     st7735RstCtrl(1); 
@@ -45,11 +46,19 @@ static void St7735SendData8Bit(unsigned char  Data)
 
 void St7735SetWindows(unsigned short Xstart, unsigned short Ystart, unsigned short Xend, unsigned short Yend)
 {
+#if ST7735A == 0	
 	Xstart = Xstart + 1;
 	Xend = Xend + 1;
 	Ystart = Ystart + 26;
 	Yend = Yend+26;
-	
+
+#else
+
+	Xstart = Xstart;
+	Xend = Xend;
+	Ystart = Ystart + 24;
+	Yend = Yend+24;
+#endif
 	ST7735SendCommand(0x2a);
 	St7735SendData8Bit(0);
 	St7735SendData8Bit(Xstart);
@@ -73,9 +82,10 @@ void st7735RegInit(void)
 
     ST7735SendCommand(0X11);
     sleep_ms(120);
+#if ST7735A == 0	
     ST7735SendCommand(0X21);
     ST7735SendCommand(0X21);
-
+#endif
     ST7735SendCommand(0Xb1);
     St7735SendData8Bit(0x05);
     St7735SendData8Bit(0x3a);
@@ -160,7 +170,7 @@ void st7735RegInit(void)
 	St7735SendData8Bit(0x05);
 
 	ST7735SendCommand(0x36);
-	St7735SendData8Bit(0xA8);
+	St7735SendData8Bit(0x68);
 	ST7735SendCommand(0x29); 
 
 }

@@ -8,32 +8,73 @@
 #include "hardware/pio.h"
 #endif
 
+// ------------------ //
+// keyboardScanPinSet //
+// ------------------ //
+
+#define keyboardScanPinSet_wrap_target 0
+#define keyboardScanPinSet_wrap 7
+
+static const uint16_t keyboardScanPinSet_program_instructions[] = {
+            //     .wrap_target
+    0x21c1, //  0: wait   1 irq, 1        side 1     
+    0x22c1, //  1: wait   1 irq, 1        side 2     
+    0x24c1, //  2: wait   1 irq, 1        side 4     
+    0x28c1, //  3: wait   1 irq, 1        side 8     
+    0x30c1, //  4: wait   1 irq, 1        side 16    
+    0x20c1, //  5: wait   1 irq, 1        side 0     
+    0x20c1, //  6: wait   1 irq, 1        side 0     
+    0x20c1, //  7: wait   1 irq, 1        side 0     
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program keyboardScanPinSet_program = {
+    .instructions = keyboardScanPinSet_program_instructions,
+    .length = 8,
+    .origin = -1,
+};
+
+static inline pio_sm_config keyboardScanPinSet_program_get_default_config(uint offset) {
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + keyboardScanPinSet_wrap_target, offset + keyboardScanPinSet_wrap);
+    sm_config_set_sideset(&c, 5, false, false);
+    return c;
+}
+#endif
+
 // ------------ //
 // keyboardScan //
 // ------------ //
 
 #define keyboardScan_wrap_target 0
-#define keyboardScan_wrap 9
+#define keyboardScan_wrap 15
 
 static const uint16_t keyboardScan_program_instructions[] = {
             //     .wrap_target
-    0xe00f, //  0: set    pins, 15                   
-    0x4010, //  1: in     pins, 16                   
-    0xe017, //  2: set    pins, 23                   
-    0x4010, //  3: in     pins, 16                   
-    0xe01b, //  4: set    pins, 27                   
-    0x4010, //  5: in     pins, 16                   
-    0xe01d, //  6: set    pins, 29                   
-    0x4010, //  7: in     pins, 16                   
-    0xe01e, //  8: set    pins, 30                   
-    0x4010, //  9: in     pins, 16                   
+    0xe02f, //  0: set    x, 15                      
+    0x400e, //  1: in     pins, 14                   
+    0xc001, //  2: irq    nowait 1                   
+    0xa046, //  3: mov    y, isr                     
+    0x4060, //  4: in     null, 32                   
+    0xa0e2, //  5: mov    osr, y                     
+    0x60c1, //  6: out    isr, 1                     
+    0x8020, //  7: push   block                      
+    0xa047, //  8: mov    y, osr                     
+    0x80a0, //  9: pull   block                      
+    0x60c1, // 10: out    isr, 1                     
+    0x8020, // 11: push   block                      
+    0x80a0, // 12: pull   block                      
+    0x60c1, // 13: out    isr, 1                     
+    0x8020, // 14: push   block                      
+    0x0045, // 15: jmp    x--, 5                     
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program keyboardScan_program = {
     .instructions = keyboardScan_program_instructions,
-    .length = 10,
+    .length = 16,
     .origin = -1,
 };
 
@@ -42,23 +83,147 @@ static inline pio_sm_config keyboardScan_program_get_default_config(uint offset)
     sm_config_set_wrap(&c, offset + keyboardScan_wrap_target, offset + keyboardScan_wrap);
     return c;
 }
+#endif
 
-// this is a raw helper function for use by the user which sets up the GPIO output, and configures the SM to output on a particular pin
-void keyboardScan_program_init(PIO pio, uint sm, uint offset, uint pin) {
-    for(int i =0;i<22;i++)
-    {
-        pio_gpio_init(pio, pin+i);
-        if(i>5) gpio_pull_up(pin+i);
-    }
-   pio_sm_set_consecutive_pindirs(pio, sm, pin, 5, true);
-   pio_sm_set_consecutive_pindirs(pio, sm, pin+6, 16, false);
-   pio_sm_config c = keyboardScan_program_get_default_config(offset);
-   sm_config_set_fifo_join(&c,PIO_FIFO_JOIN_RX);
-   sm_config_set_set_pins(&c, pin,5);
-   sm_config_set_in_pins(&c, pin+6);
-   sm_config_set_in_shift(&c,false,true,16);
-   pio_sm_init(pio, sm, offset, &c);
+// --- //
+// xor //
+// --- //
+
+#define xor_wrap_target 2
+#define xor_wrap 7
+
+static const uint16_t xor_program_instructions[] = {
+    0x40e1, //  0: in     osr, 1                     
+    0x6068, //  1: out    null, 8                    
+            //     .wrap_target
+    0x6028, //  2: out    x, 8                       
+    0x6048, //  3: out    y, 8                       
+    0x4021, //  4: in     x, 1                       
+    0x00a0, //  5: jmp    x != y, 0                  
+    0x4021, //  6: in     x, 1                       
+    0x6068, //  7: out    null, 8                    
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program xor_program = {
+    .instructions = xor_program_instructions,
+    .length = 8,
+    .origin = -1,
+};
+
+static inline pio_sm_config xor_program_get_default_config(uint offset) {
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + xor_wrap_target, offset + xor_wrap);
+    return c;
 }
+#endif
 
+// -------------- //
+// DataSeparation //
+// -------------- //
+
+#define DataSeparation_wrap_target 0
+#define DataSeparation_wrap 10
+
+static const uint16_t DataSeparation_program_instructions[] = {
+            //     .wrap_target
+    0xe02f, //  0: set    x, 15                      
+    0xe040, //  1: set    y, 0                       
+    0x80a0, //  2: pull   block                      
+    0x40e8, //  3: in     osr, 8                     
+    0x80a0, //  4: pull   block                      
+    0x40e8, //  5: in     osr, 8                     
+    0xa0c2, //  6: mov    isr, y                     
+    0x40e1, //  7: in     osr, 1                     
+    0xa046, //  8: mov    y, isr                     
+    0x0042, //  9: jmp    x--, 2                     
+    0x8020, // 10: push   block                      
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program DataSeparation_program = {
+    .instructions = DataSeparation_program_instructions,
+    .length = 11,
+    .origin = -1,
+};
+
+static inline pio_sm_config DataSeparation_program_get_default_config(uint offset) {
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + DataSeparation_wrap_target, offset + DataSeparation_wrap);
+    return c;
+}
+#endif
+
+// -------- //
+// encoderA //
+// -------- //
+
+#define encoderA_wrap_target 0
+#define encoderA_wrap 10
+
+static const uint16_t encoderA_program_instructions[] = {
+            //     .wrap_target
+    0x80a0, //  0: pull   block                      
+    0x6065, //  1: out    null, 5                    
+    0xa0c1, //  2: mov    isr, x                     
+    0x40e2, //  3: in     osr, 2                     
+    0xa026, //  4: mov    x, isr                     
+    0x8020, //  5: push   block                      
+    0x6063, //  6: out    null, 3                    
+    0xa0c2, //  7: mov    isr, y                     
+    0x40e2, //  8: in     osr, 2                     
+    0xa046, //  9: mov    y, isr                     
+    0x8020, // 10: push   block                      
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program encoderA_program = {
+    .instructions = encoderA_program_instructions,
+    .length = 11,
+    .origin = -1,
+};
+
+static inline pio_sm_config encoderA_program_get_default_config(uint offset) {
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + encoderA_wrap_target, offset + encoderA_wrap);
+    return c;
+}
+#endif
+
+// -------- //
+// encoderB //
+// -------- //
+
+#define encoderB_wrap_target 4
+#define encoderB_wrap 7
+
+static const uint16_t encoderB_program_instructions[] = {
+    0xe022, //  0: set    x, 2                       
+    0x00a7, //  1: jmp    x != y, 7                  
+    0xe020, //  2: set    x, 0                       
+    0x0007, //  3: jmp    7                          
+            //     .wrap_target
+    0xe021, //  4: set    x, 1                       
+    0x6044, //  5: out    y, 4                       
+    0x00a0, //  6: jmp    x != y, 0                  
+    0x4022, //  7: in     x, 2                       
+            //     .wrap
+};
+
+#if !PICO_NO_HARDWARE
+static const struct pio_program encoderB_program = {
+    .instructions = encoderB_program_instructions,
+    .length = 8,
+    .origin = -1,
+};
+
+static inline pio_sm_config encoderB_program_get_default_config(uint offset) {
+    pio_sm_config c = pio_get_default_sm_config();
+    sm_config_set_wrap(&c, offset + encoderB_wrap_target, offset + encoderB_wrap);
+    return c;
+}
 #endif
 
