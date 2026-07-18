@@ -28,6 +28,11 @@ add_subdirectory(./usb)
 add_subdirectory(./st7735) 
 add_subdirectory(./lib/lvgl) 
 add_subdirectory(./lib/littlefs) 
+add_subdirectory(./keymap)
+add_subdirectory(./dataSave)
+add_subdirectory(./apm)
+add_subdirectory(./boot)
+add_subdirectory(./debug)
 add_subdirectory(./UI) 
 add_subdirectory(./lib/cJson) 
 add_subdirectory(./ws2812) 
@@ -43,23 +48,21 @@ include_directories(./UI)
 include_directories(./lib/cJson) 
 include_directories(./lvglPort) 
 include_directories(./ws2812) 
+include_directories(./keymap)
+include_directories(./dataSave)
+include_directories(./apm)
+include_directories(./boot)
+include_directories(./debug)
 
 add_definitions(-DDUAL_CONFIG=1) 
 add_definitions(-DPICO_FLASH_SPI_CLKDIV=2) 
 add_executable(firmware 
   main.c
-  keymap.c 
-  dataSaveModel.c
-  apmCount.c
-  boot.c
-  debug.c
   ./lvglPort/lv_port_disp.c
-  gif.c
-  HCR.c
 )
 
 target_include_directories(firmware PUBLIC . ${PICO_SDK_PATH}/lib/tinyusb/lib/networking) 
-target_link_libraries(firmware pico_stdlib pico_multicore rndis userUsb keyboardScan st7735 lvgl UI tinyusb_device hardware_flash littleFs cjson ws2812)
+target_link_libraries(firmware pico_stdlib pico_multicore rndis userUsb keyboardScan st7735 lvgl UI keymap dataSave apm boot debugModule tinyusb_device hardware_flash littleFs cjson ws2812)
 pico_enable_stdio_usb(firmware 0)    # Route stdio
 pico_enable_stdio_uart(firmware 1)   # to the UART
 pico_add_extra_outputs(firmware)     # create map/bin/hex file etc.  

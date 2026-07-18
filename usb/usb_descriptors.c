@@ -301,7 +301,9 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 {
   //printf("tud_descriptor_configuration_cb %d \r\n",index);
   unsigned char getFlashRateInfo(void);
-  rndis_configuration[RATE_OFFSET] = getFlashRateInfo();
+  unsigned char interval = getFlashRateInfo();
+  if(interval < 1 || interval > 20) interval = 1;
+  rndis_configuration[RATE_OFFSET] = interval;
   return (index < CONFIG_ID_COUNT) ? configuration_arr[index] : NULL;
 }
 

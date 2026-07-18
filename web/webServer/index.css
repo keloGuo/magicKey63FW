@@ -1,0 +1,352 @@
+
+#keyboardA {
+    width: 585px;
+    height: 210px;
+    margin-right: auto;
+    margin-left: auto;
+    margin-top: 0px;
+    position: relative;left: 0px;top: 0px;
+    border-radius:10px;
+    background-color:#000000;
+    text-align:center;
+}
+
+.keyA {
+    height: 29px;
+    width: 26px;
+    background-color: #fff;
+    border: 1px solid #CCC;
+    padding-left: 4px;
+    padding-top: 1px;
+    float: left;
+    margin-right: 3px;
+    margin-left: 3px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    overflow: hidden;
+    font-size:10px;
+    Line-height:12px;
+
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+
+}
+
+
+.greatButton{
+    margin-top: 80px;
+    width:40px;
+    font-size:20px;
+    float: left;
+    background-color: #4d93db;
+    border-width:0px;
+    border-radius:10px;
+    line-height: 1;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.layerButton{
+    height: 30px;
+    width: 30px;
+    background-color: #fff;
+    border: 1px solid #000000;
+    border-radius:5px;
+
+    margin-right: 10px;
+    margin-left: 3px;
+    margin-top: 5px;
+
+    text-align: center;
+    
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    overflow: hidden;
+    font-size:20px;
+    Line-height:30px;
+
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+} 
+
+.keyB {
+    height: 28px;
+    width: 48px;
+    background-color: #fff;
+    border: 1px solid #CCC;
+    padding-left: 1px;
+    padding-top: 1px;
+    float: left;
+    margin-right: 3px;
+    margin-left: 3px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    overflow: hidden;
+    font-size:10px;
+    Line-height:24px;
+
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+
+}
+
+#macroBindKeyboard {
+    width: 888px;
+    min-height: 50px;
+    margin-top: 20px;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: #000000;
+    border-radius: 10px;
+    text-align: center;
+}
+
+#macroBindList {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 6px;
+    padding-top: 8px;
+}
+
+.macroBindKey {
+    Line-height:24px;
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+.topButton {
+    height: 30px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background: #ffffff;
+    border: 1px solid #999999;
+}
+
+.topButtonActive {
+    background: #4d93db;
+    color: #ffffff;
+}
+
+.macroPanel {
+    width: 940px;
+    margin-top: 32px;
+    margin-right: auto;
+    margin-left: auto;
+    border: 1px solid #c9d3df;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 14px;
+    background-color: #f7f9fc;
+    color: #17202a;
+}
+
+.macroHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #d8e0ea;
+    padding-bottom: 12px;
+}
+
+.macroTitle {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 24px;
+}
+
+.macroMeta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 6px;
+    color: #5b6877;
+    font-size: 12px;
+}
+
+#macroDirtyBadge {
+    color: #b04a00;
+}
+
+.macroToolbar {
+    display: flex;
+    gap: 8px;
+}
+
+.macroRow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.macroModeCompact {
+    height: 24px;
+    border: 1px solid #aeb9c6;
+    border-radius: 5px;
+    background-color: #ffffff;
+    color: #17202a;
+    font-size: 12px;
+}
+
+.macroButton {
+    min-width: 76px;
+    height: 30px;
+    border: 1px solid #9aa8b7;
+    border-radius: 5px;
+    background-color: #ffffff;
+    color: #17202a;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.macroButtonPrimary {
+    background-color: #1f7a8c;
+    border-color: #1f7a8c;
+    color: #ffffff;
+}
+
+.macroButtonSave {
+    background-color: #2454a6;
+    border-color: #2454a6;
+    color: #ffffff;
+}
+
+.macroButtonDanger {
+    border-color: #c45a5a;
+    color: #a62e2e;
+}
+
+.macroRow input:disabled,
+.macroButton:disabled {
+    color: #8a96a3;
+    background-color: #e4e9ef;
+    border-color: #ccd4dd;
+}
+
+.macroRow input.macroButtonActive {
+    color: #ffffff;
+    background-color: #4d93db;
+    border-color: #2d6fad;
+}
+
+.macroSpacer {
+    flex: 1;
+}
+
+.macroDelayInput {
+    width: 82px;
+    height: 28px;
+    border: 1px solid #aeb9c6;
+    border-radius: 5px;
+    padding-left: 6px;
+}
+
+.macroUnit {
+    color: #5b6877;
+}
+
+.macroSectionTitle {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: #5b6877;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#macroKeyboardHost {
+    margin-top: 8px;
+    border-top: 1px solid #d8e0ea;
+    padding-top: 8px;
+}
+
+.macroCard {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 42px;
+    margin-top: 8px;
+    border: 1px solid #d8e0ea;
+    border-radius: 6px;
+    padding: 7px;
+    background-color: #ffffff;
+    overflow-x: auto;
+}
+
+.macroCardActive {
+    border-color: #4d93db;
+    background-color: #eef6ff;
+}
+
+.macroActionBox {
+    height: 30px;
+    min-width: 48px;
+    border: 1px solid #b8c2cf;
+    border-radius: 5px;
+    padding-left: 5px;
+    padding-right: 5px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 30px;
+    text-align: center;
+    user-select: none;
+    flex: 0 0 auto;
+}
+
+.macroActionDown {
+    background-color: #d94b4b;
+    border-color: #c83d3d;
+    color: #ffffff;
+}
+
+.macroActionUp {
+    background-color: #30a85a;
+    border-color: #248846;
+    color: #ffffff;
+}
+
+.macroActionTap {
+    background-color: #4d93db;
+    border-color: #2d78c8;
+    color: #ffffff;
+}
+
+.macroActionDelay {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.macroInfoBox {
+    background-color: #edf1f6;
+    border-color: #c9d3df;
+    color: #17202a;
+    font-weight: 700;
+}
+
+.macroModeBox {
+    min-width: 76px;
+    font-weight: 400;
+}
+
+.macroCountBox {
+    min-width: 48px;
+    color: #5b6877;
+    font-weight: 400;
+}
+
+.macroActionSelected {
+    outline: 2px solid #17202a;
+    outline-offset: 1px;
+}

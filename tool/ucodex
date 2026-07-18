@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [[ -L "$SCRIPT_PATH" ]]; do
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+  [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+START_DIR="$(pwd -P)"
+
+STATE_DIR="${UCODEX_STATE_DIR:-$HOME/.ucodex}"
+LOG_DIR="${UCODEX_LOG_DIR:-$STATE_DIR/logs}"
+STATE_FILE="${UCODEX_STATE_FILE:-$STATE_DIR/status_state}"
+HOOK_SCRIPT="${UCODEX_HOOK_SCRIPT:-$SCRIPT_DIR/codex_app_server_hook.py}"
+if [[ ! -x "$HOOK_SCRIPT" && -x "/usr/local/lib/ucodex/codex_app_server_hook.py" ]]; then
+  HOOK_SCRIPT="/usr/local/lib/ucodex/codex_app_server_hook.py"
+fi
+if [[ ! -x "$HOOK_SCRIPT" && -x "$HOME/.local/lib/ucodex/codex_app_server_hook.py" ]]; then
+  HOOK_SCRIPT="$HOME/.local/lib/ucodex/codex_app_server_hook.py"
+fi
+
+mkdir -p "$LOG_DIR"
+
+HOST="${CODEX_STATUS_HOST:-127.0.0.1}"
+PORT_START="${CODEX_STATUS_PORT:-4222}"
+DEVICE_URL="${DEVICE_URL:-http://192.168.3.1:80}"
+CODEX_BIN="${CODEX_BIN:-codex}"
+
+APP_SERVER_PID=""
+WATCHER_PID=""
+
+cleanup() {
+  local status=$?
+  if [[ -n "$WATCHER_PID" ]]; then
+    kill "$WATCHER_PID" 2>/dev/null || true
+    wait "$WATCHER_PID" 2>/dev/null || true
+  fi
+  if [[ -n "$APP_SERVER_PID" ]]; then
+    kill "$APP_SERVER_PID" 2>/dev/null || true
+    wait "$APP_SERVER_PID" 2>/dev/null || true
+  fi
+  exit "$status"
+}
+trap cleanup EXIT INT TERM
+
+port_is_free() {
+  local port="$1"
+  if command -v ss >/dev/null 2>&1; then
+    ! ss -ltn | awk '{print $4}' | grep -Eq "(^|:)${port}$"
+  else
+    ! (exec 3<>"/dev/tcp/$HOST/$port") >/dev/null 2>&1
+  fi
+}
+
+pick_port() {
+  local port="$PORT_START"
+  local limit=$((PORT_START + 50))
+  while (( port <= limit )); do
+    if port_is_free "$port"; then
+      printf '%s\n' "$port"
+      return 0
+    fi
+    port=$((port + 1))
+  done
+  return 1
+}
+
+wait_for_port() {
+  local port="$1"
+  local deadline=$((SECONDS + 15))
+  while (( SECONDS < deadline )); do
+    if ! port_is_free "$port"; then
+      return 0
+    fi
+    sleep 0.2
+  done
+  return 1
+}
+
+PORT="$(pick_port)"
+APP_SERVER_URL="ws://$HOST:$PORT"
+
+printf '[codex-status] starting app-server at %s\n' "$APP_SERVER_URL" >&2
+"$CODEX_BIN" app-server --listen "$APP_SERVER_URL" >"$LOG_DIR/app-server-console.log" 2>&1 &
+APP_SERVER_PID="$!"
+printf '%s\n' "$APP_SERVER_PID" >"$LOG_DIR/app-server-console.pid"
+
+if ! wait_for_port "$PORT"; then
+  printf '[codex-status] app-server did not listen in time, see %s\n' "$LOG_DIR/app-server-console.log" >&2
+  exit 1
+fi
+
+printf '[codex-status] starting device status watcher\n' >&2
+rm -f "$STATE_FILE"
+DEVICE_URL="$DEVICE_URL" CODEX_STATUS_STATE_FILE="$STATE_FILE" "$HOOK_SCRIPT" \
+  --app-server "$APP_SERVER_URL" \
+  --watch \
+  --verbose \
+  >"$LOG_DIR/watcher-console.log" 2>&1 &
+WATCHER_PID="$!"
+printf '%s\n' "$WATCHER_PID" >"$LOG_DIR/watcher-console.pid"
+
+printf '[codex-status] entering Codex TUI through %s\n' "$APP_SERVER_URL" >&2
+printf '[codex-status] logs: %s\n' "$LOG_DIR" >&2
+"$CODEX_BIN" --remote "$APP_SERVER_URL" -C "$START_DIR" "$@"

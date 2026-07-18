@@ -4,7 +4,6 @@
 #include "pico/bootrom.h"
 #include "hardware/clocks.h"
 #include <stdio.h>
-#include "tusb.h"
 #include <ctype.h>
 #include <stdarg.h>
 

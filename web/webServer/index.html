@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+    
+    
+    <!-- inject:css -->
+    <link type="text/css" rel="styleSheet" href="index.css" />
+    <!-- endinject -->
+    
+    <!-- inject:js -->
+    <script src="main.js"></script> 
+    <!-- endinject -->
+    
+
+    <head><meta charset="utf-8"><title>magic Key</title></head>
+    <body>
+      <div style="width: 630px; margin-top: 24px; margin-right: auto; margin-left: auto; display: flex; justify-content: space-between; align-items: center;">
+        <span id="fsInfo" style="font-size: 13px; color: #333;">FS --</span>
+        <div>
+          <input type="button" id="showKeyboardPage" class="topButton topButtonActive" value="键盘" />
+          <input type="button" id="showMacroPage" class="topButton" value="宏" />
+          <input type="button" id="deviceReboot" value="重启设备" style="height: 30px; padding-left: 16px; padding-right: 16px;" />
+        </div>
+      </div>
+      <div id="keyboardPage">
+      <div style="width: 630px; display: flex; margin-top: 100px;margin-right: auto;margin-left: auto;">
+        <div style=" width: 30px;margin-top: 15px;">
+          <div class="layerButton" id="layer1" >1</div>
+          <div class="layerButton" id="layer2" >2</div>
+          <div class="layerButton" id="layer3" >3</div>
+          <div class="layerButton" id="layer4" >4</div>
+        </div>
+        <div id="keyboardA">
+          <div style="clear: both;height: 8px;"></div>
+          <div style="width: 10px;height: 32px;float: left;"></div>
+          
+          <div class="keyA" id="keyId3" >Esc</div>
+          <div class="keyA" id="keyId4" >!<br />1</div>
+          <div class="keyA" id="keyId5" >@<br />2</div>
+          <div class="keyA" id="keyId6" >#<br />3</div> 
+          <div class="keyA" id="keyId7" >$<br />4</div>
+          <div class="keyA" id="keyId8" >%<br />5</div>
+          <div class="keyA" id="keyId9" >^<br />6</div>
+          <div class="keyA" id="keyId10" >&amp;<br />7</div>
+          <div class="keyA" id="keyId11" >*<br />8</div>
+          <div class="keyA" id="keyId12" >（<br />9</div>
+          <div class="keyA" id="keyId13" >）<br />0</div>
+          <div class="keyA" id="keyId14" >—<br />-</div>
+          <div class="keyA" id="keyId15" >+<br />=</div>
+          <div class="keyA" id="keyId16" style="width: 60px;">Backspace</div>
+  
+          <div style="clear: both;height: 8px;"></div>
+          <div style="width: 10px;height: 32px;float: left;"></div>
+  
+          <div class="keyA" id="keyId19" style="width: 43px;" name="Tab">Tab</div>
+          <div class="keyA" id="keyId20" >Q</div>
+          <div class="keyA" id="keyId21">W</div>
+          <div class="keyA" id="keyId22" >E</div>
+          <div class="keyA" id="keyId23" >R</div>
+          <div class="keyA" id="keyId24" >T</div>
+          <div class="keyA" id="keyId25" >Y</div>
+          <div class="keyA" id="keyId26" >U</div>
+          <div class="keyA" id="keyId27" >I</div>
+          <div class="keyA" id="keyId28" >O</div>
+          <div class="keyA" id="keyId29" >P</div>
+          <div class="keyA" id="keyId30" >{<br />[</div>
+          <div class="keyA" id="keyId31" >}<br />]</div>
+          <div class="keyA" id="keyId32" style="width: 43px;">|<br />\</div>
+  
+          <div style="clear: both;height: 8px;"></div>
+          <div style="width: 10px;height: 32px;float: left;"></div>
+  
+          <div class="keyA" id="keyId35"  style="width: 52px;">Caps<br />Lock</div>
+          <div class="keyA" id="keyId36"  >A</div>
+          <div class="keyA" id="keyId37"  >S</div>
+          <div class="keyA" id="keyId38"  >D</div>
+          <div class="keyA" id="keyId39"  >F</div>
+          <div class="keyA" id="keyId40"  >G</div>
+          <div class="keyA" id="keyId41"  >H</div>
+          <div class="keyA" id="keyId42"  >J</div>
+          <div class="keyA" id="keyId43"  >K</div>
+          <div class="keyA" id="keyId44"  >L</div>
+          <div class="keyA" id="keyId45"  >:<br />;</div>
+          <div class="keyA" id="keyId46"  >"<br />'</div>
+          <div class="keyA" id="keyId47"   style="width: 71px;">Enter</div>
+  
+  
+          <div style="clear: both;height: 8px;"></div>
+          <div style="width: 10px;height: 32px;float: left;"></div>
+  
+          <div class="keyA" id="keyId51" style="width: 60px;">Shift</div>
+          <div class="keyA" id="keyId52" >Z</div>
+          <div class="keyA" id="keyId53" >X</div>
+          <div class="keyA" id="keyId54" >C</div>
+          <div class="keyA" id="keyId55" >V</div>
+          <div class="keyA" id="keyId56" >B</div>
+          <div class="keyA" id="keyId57" >N</div>
+          <div class="keyA" id="keyId58" >M</div>
+          <div class="keyA" id="keyId59" >&lt;<br />,</div>
+          <div class="keyA" id="keyId60" >&gt;<br />.</div>
+          <div class="keyA" id="keyId61" >?<br />/</div>
+          <div class="keyA" id="keyId62" >↑</div>
+          <div class="keyA" id="keyId63" style="width: 60px;" >shift</div>
+  
+          <div style="clear: both;height: 8px;"></div>
+          <div style="width: 10px;height: 32px;float: left;"></div>
+  
+          <div class="keyA" id="keyId67" style="width: 43px;">Ctrl</div>
+          <div class="keyA" id="keyId68" >Win</div>
+          <div class="keyA" id="keyId69" >Alt</div>
+          <div class="keyA" id="keyId72" style="width: 233px;">Space</div>
+          <div class="keyA" id="keyId75" >Alt</div>
+          <div class="keyA" id="keyId76" >FN<br />1</div>
+          <div class="keyA" id="keyId77" >←</div>
+          <div class="keyA" id="keyId78" >↓</div>
+          <div class="keyA" id="keyId64" >→</div>
+        </div>
+      </div>    
+      <div id="keyboardA"  style="width:200px;height: 39px;margin-top: 0px; border: radius 2px;">
+        <div style="clear: both;height: 4px;"></div>
+        <div style="width: 8px;height: 32px;float: left;"></div>
+        <div class="keyB" style="Line-height:12px;" id="keyId71" name="v-">编码器左</div>
+        <div class="keyB" style="Line-height:12px;" id="keyId79" name="v0"  style="width:60px;">编码器按下</div>
+        <div class="keyB" style="Line-height:12px;" id="keyId70" name="v+">编码器右</div>
+      </div>
+
+      <div id="sharedKeyboardHome">
+      <div id="sharedVirtualKeyboard">
+      <div id="keyboardA"  style="width:888px;height: 50px;margin-top: 20px;">
+        <div style="clear: both;height: 8px;"></div>
+        <div style="width: 20px;height: 32px;float: left;"></div>
+        <div class="keyB" id="IDM1" name="v-">音量减</div>
+        <div class="keyB" id="IDM2" name="v0">静音</div>
+        <div class="keyB" id="IDM0" name="v+">音量加</div>
+        <div class="keyB" id="IDM4" name="Media">播放器</div>
+        <div class="keyB" id="IDM7" name="TU">上一曲</div>
+        <div class="keyB" id="IDM6" name="Play_Pause" style="width: 70px;">暂停/播放</div>
+        <div class="keyB" id="IDM8" name="TD">下一曲</div>
+        <div class="keyB" id="IDM9" name="S">停止</div>
+        <div class="keyB" id="IDM5" name="www">浏览器</div>
+  
+        <div style="width: 35px;height: 32px;float: left;"></div>
+        <div class="keyB" id="IDS0" name="MLeft">鼠标左键</div>
+        <div class="keyB" id="IDS2" name="MMiddle">鼠标中键</div>
+        <div class="keyB" id="IDS1" name="MRight">鼠标右键</div>
+  
+        <div class="keyB" id="IDS3" name="MMiddle">滚轮上</div>
+        <div class="keyB" id="IDS4" name="MRight">滚轮下</div>
+      </div>
+  
+      <div id="keyboardA"  style="width:888px;height: 250px;margin-top: 20px;">
+        <div style="float: left;">
+            <div style="clear: both;height: 8px;"></div>
+            <div style="width: 10px;height: 32px;float: left;"></div>
+  
+            <div class="keyA" id="ID0x29" name="Escape">Esc</div>
+            <div style="width: 32px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x3A" name="F1">F1</div>
+            <div class="keyA" id="ID0x3B" name="F2">F2</div>
+            <div class="keyA" id="ID0x3C" name="F3">F3</div>
+            <div class="keyA" id="ID0x3D" name="F4">F4</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x3E" name="F5">F5</div>
+            <div class="keyA" id="ID0x3F" name="F6">F6</div>
+            <div class="keyA" id="ID0x40" name="F7">F7</div>
+            <div class="keyA" id="ID0x41" name="F8">F8</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x42" name="F9">F9</div>
+            <div class="keyA" id="ID0x43" name="F10">F10</div>
+            <div class="keyA" id="ID0x44" name="F11">F11</div>
+            <div class="keyA" id="ID0x45" name="F12">F12</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x46" name="PrintScreen">Print<br />Scrn</div>
+            <div class="keyA" id="ID0x47" name="ScrollLock">Scroll<br />Lock</div>
+            <div class="keyA" id="ID0x48" name="Pause">Pause<br />Break</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="IDL1" name="1">FN<br />1</div>
+            <div class="keyA" id="IDL2" name="2">FN<br />2</div>
+            <div class="keyA" id="IDL3" name="3">FN<br />3</div>
+            
+  
+            <div style="clear: both;height: 8px;"></div>
+            <div style="width: 10px;height: 32px;float: left;"></div>
+  
+            <div class="keyA" id="ID0x35" name="Backquote">~<br />`</div>
+            <div class="keyA" id="ID0x1E" name="Digit1">!<br />1</div>
+            <div class="keyA" id="ID0x1F" name="Digit2">@<br />2</div>
+            <div class="keyA" id="ID0x20" name="Digit3">#<br />3</div>
+            <div class="keyA" id="ID0x21" name="Digit4">$<br />4</div>
+            <div class="keyA" id="ID0x22" name="Digit5">%<br />5</div>
+            <div class="keyA" id="ID0x23" name="Digit6">^<br />6</div>
+            <div class="keyA" id="ID0x24" name="Digit7">&amp;<br />7</div>
+            <div class="keyA" id="ID0x25" name="Digit8">*<br />8</div>
+            <div class="keyA" id="ID0x26" name="Digit9">（<br />9</div>
+            <div class="keyA" id="ID0x27" name="Digit0">）<br />0</div>
+            <div class="keyA" id="ID0x2D" name="Minus">—<br />-</div>
+            <div class="keyA" id="ID0x2E" name="Equal">+<br />=</div>
+            <div class="keyA" id="ID0x2A" name="Backspace" style="width: 60px;">Backspace</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x49" name="Insert">Insert</div>
+            <div class="keyA" id="ID0x4A" name="Home">Home</div>
+            <div class="keyA" id="ID0x4B" name="PageUp">Page<br />Up</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x53" name="NumLock">Num<br />Lock</div>
+            <div class="keyA" id="ID0x54" name="NumpadDivide">/</div>
+            <div class="keyA" id="ID0x55" name="NumpadMultiply">*</div>
+  
+            <div style="clear: both;height: 8px;"></div>
+            <div style="width: 10px;height: 32px;float: left;"></div>
+  
+            <div class="keyA" id="ID0x2B" style="width: 43px;" name="Tab">Tab</div>
+            <div class="keyA" id="ID0x14" name="KeyQ">Q</div>
+            <div class="keyA" id="ID0x1A" name="KeyW">W</div>
+            <div class="keyA" id="ID0x8" name="KeyE">E</div>
+            <div class="keyA" id="ID0x15" name="KeyR">R</div>
+            <div class="keyA" id="ID0x17" name="KeyT">T</div>
+            <div class="keyA" id="ID0x1C" name="KeyY">Y</div>
+            <div class="keyA" id="ID0x18" name="KeyU">U</div>
+            <div class="keyA" id="ID0xC" name="KeyI">I</div>
+            <div class="keyA" id="ID0x12" name="KeyO">O</div>
+            <div class="keyA" id="ID0x13" name="KeyP">P</div>
+            <div class="keyA" id="ID0x2F" name="BracketLeft">{<br />[</div>
+            <div class="keyA" id="ID0x30" name="BracketRight">}<br />]</div>
+            <div class="keyA" id="ID0x31" name="Backslash" style="width: 43px;">|<br />\</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x4C" name="Delete">Delete</div>
+            <div class="keyA" id="ID0x4D" name="End">End</div>
+            <div class="keyA" id="ID0x4E" name="PageDown">Page<br />Down</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x5F" name="Numpad7">7<br />Home</div>
+            <div class="keyA" id="ID0x60" name="Numpad8">8<br />↑</div>
+            <div class="keyA" id="ID0x61" name="Numpad9">9<br />Pg Up</div>
+  
+            <div style="clear: both;height: 8px;"></div>
+            <div style="width: 10px;height: 32px;float: left;"></div>
+  
+            <div class="keyA" id="ID0x39" name="CapsLock" style="width: 56px;">Caps<br />Lock</div>
+            <div class="keyA" id="ID0x4" name="KeyA">A</div>
+            <div class="keyA" id="ID0x16" name="KeyS">S</div>
+            <div class="keyA" id="ID0x7" name="KeyD">D</div>
+            <div class="keyA" id="ID0x9" name="KeyF">F</div>
+            <div class="keyA" id="ID0xA" name="KeyG">G</div>
+            <div class="keyA" id="ID0xB" name="KeyH">H</div>
+            <div class="keyA" id="ID0xD" name="KeyJ">J</div>
+            <div class="keyA" id="ID0xE" name="KeyK">K</div>
+            <div class="keyA" id="ID0xF" name="KeyL">L</div>
+            <div class="keyA" id="ID0x33" name="Semicolon">:<br />;</div>
+            <div class="keyA" id="ID0x34" name="Quote">"<br />'</div>
+            <div class="keyA" id="ID0x28" name="Enter" style="width: 68px;">Enter</div>
+            <div style="width: 154px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x5C" name="Numpad4">4<br />←</div>
+            <div class="keyA" id="ID0x5D" name="Numpad5">5</div>
+            <div class="keyA" id="ID0x5E" name="Numpad6">6<br />→</div>
+  
+            <div style="clear: both;height: 8px;"></div>
+            <div style="width: 10px;height: 32px;float: left;"></div>
+  
+            <div class="keyA" id="ID2" name="ShiftLeft" style="width: 74px;">Shift</div>
+            <div class="keyA" id="ID0x1D" name="KeyZ">Z</div>
+            <div class="keyA" id="ID0x1B" name="KeyX">X</div>
+            <div class="keyA" id="ID0x6" name="KeyC">C</div>
+            <div class="keyA" id="ID0x19" name="KeyV">V</div>
+            <div class="keyA" id="ID0x5" name="KeyB">B</div>
+            <div class="keyA" id="ID0x11" name="KeyN">N</div>
+            <div class="keyA" id="ID0x10" name="KeyM">M</div>
+            <div class="keyA" id="ID0x36" name="Comma">&lt;<br />,</div>
+            <div class="keyA" id="ID0x37" name="Period">&gt;<br />.</div>
+            <div class="keyA" id="ID0x38" name="Slash">?<br />/</div>
+            <div class="keyA" id="ID6" name="ShiftRight" style="width: 88px;">Shift</div>
+            <div style="width: 58px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x52" name="ArrowUp">↑</div>
+            <div style="width: 58px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x59" name="Numpad1">1<br />End</div>
+            <div class="keyA" id="ID0x5A" name="Numpad2">2<br />↓</div>
+            <div class="keyA" id="ID0x5B" name="Numpad3">3<br />Pg Dn</div>
+  
+            <div style="clear: both;height: 8px;"></div>
+            <div style="width: 10px;height: 32px;float: left;"></div>
+  
+            <div class="keyA" id="ID1" name="ControlLeft" style="width: 43px;">Ctrl</div>
+            <div class="keyA" id="ID4" name="MetaLeft">Win</div>
+            <div class="keyA" id="ID3" name="AltLeft">Alt</div>
+            <div class="keyA" id="ID0x2C" name="Space" style="width: 271px;">Space</div>
+            <div class="keyA" id="ID7" name="AltRight">Alt</div>
+            <div class="keyA" id="ID8" name="MetaRight">Win</div>
+            <div class="keyA" id="ID0x76" name="ContextMenu">Menu</div>
+            <div class="keyA" id="ID5" name="ControlRight">Ctrl</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x50" name="ArrowLeft">←</div>
+            <div class="keyA" id="ID0x51" name="ArrowDown">↓</div>
+            <div class="keyA" id="ID0x4F" name="ArrowRight">→</div>
+            <div style="width: 20px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x62" name="Numpad0" style="width: 64px;">0<br />Ins</div>
+            <div class="keyA" id="ID0x63" name="NumpadDecimal">.<br />Del</div>
+          </div>
+          <div style="float: left;">
+            <div style="clear: both;height: 8px;"></div>
+            <div class="keyA" id="IDL4" name="4">FN<br />4</div>
+            <div style="clear: both;height: 8px;"></div>
+            <div class="keyA" id="ID0x56" name="NumpadSubtract">-</div>
+            <div style="clear: both;height: 8px;"></div>
+            <div class="keyA" id="ID0x57" name="NumpadAdd" style="height: 70px;">+</div>
+            <div style="clear: both;height: 8px;"></div>
+            <div class="keyA" id="ID0x58" name="NumpadEnter" style="height: 70px;">Enter</div>
+          </div>
+          </div>
+          <div id="macroBindKeyboard">
+            <div style="clear: both;height: 8px;"></div>
+            <div id="macroBindList"></div>
+          </div>
+        </div>
+      </div>
+      </div>
+      <div id="macroPage" style="display: none;">
+        <div class="macroPanel">
+          <div class="macroHeader">
+            <div>
+              <div class="macroTitle">宏编辑</div>
+              <div class="macroMeta">
+                <span id="macroCurrentTitle">M1</span>
+                <span id="macroActionCount">0 动作</span>
+                <input type="hidden" id="macroId" value="1" />
+                <select id="macroMode" class="macroModeCompact">
+                  <option value="0">按下触发</option>
+                  <option value="1">按下循环</option>
+                </select>
+                <span id="macroDirtyBadge"></span>
+              </div>
+            </div>
+            <div class="macroToolbar">
+              <input type="button" id="macroNew" class="macroButton macroButtonPrimary" value="新建宏" />
+              <input type="button" id="macroDelete" class="macroButton macroButtonDanger" value="删除宏" />
+              <input type="button" id="macroSave" class="macroButton macroButtonSave" value="保存" />
+            </div>
+          </div>
+          <div class="macroSectionTitle">动作</div>
+          <div class="macroRow macroEditRow">
+            <input type="button" id="macroAddAction" class="macroButton" value="添加按键" />
+            <input type="button" id="macroAddDelay" class="macroButton" value="添加延时" />
+            <input type="button" id="macroDeleteAction" class="macroButton macroButtonDanger" value="删除按键" />
+            <input type="button" id="macroDeleteDelay" class="macroButton macroButtonDanger" value="删除延时" />
+            <span class="macroSpacer"></span>
+            <input type="button" id="macroTypeDown" class="macroButton" value="按下" />
+            <input type="button" id="macroTypeTap" class="macroButton" value="按下松开" />
+            <input type="button" id="macroTypeUp" class="macroButton" value="松开" />
+            <input type="number" id="macroDelayValue" class="macroDelayInput" min="1" max="60000" step="10" value="100" />
+            <span class="macroUnit">ms</span>
+          </div>
+          <div class="macroSectionTitle">宏列表</div>
+          <div id="macroList"></div>
+          <div id="macroActionList"></div>
+          <div class="macroSectionTitle">按键选择</div>
+          <div id="macroKeyboardHost"></div>
+        </div>
+      </div>
+    </body>    
+  </html>

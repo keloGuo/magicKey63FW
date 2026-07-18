@@ -14,12 +14,29 @@ static struct saveData {
 } saveDataS = {
     0x01,         //版本识别
     0x01,         //默认第一层，
-    0x00,         //默认回报间隔1ms\1000hz
+    0x01,         //默认回报间隔1ms\1000hz
     0x02,         //默认第一个功能，显示当前的回报率，应为其他功能还没有做
     0x05,
 };
 
 static lfs_t *lfsHandle;          //文件系统的句柄
+
+static void dataSaveSetDefault(void)
+{
+    saveDataS.updateFlag = UPDATE_FLAG;
+    saveDataS.activeLayer = 1;
+    saveDataS.rate = 1;
+    saveDataS.statePageFunction = 2;
+    saveDataS.backLight = 5;
+}
+
+static void dataSaveLimit(void)
+{
+    if(saveDataS.activeLayer < 1 || saveDataS.activeLayer > 4) saveDataS.activeLayer = 1;
+    if(saveDataS.rate < 1 || saveDataS.rate > 20) saveDataS.rate = 1;
+    if(saveDataS.statePageFunction > 2) saveDataS.statePageFunction = 2;
+    if(saveDataS.backLight > 20) saveDataS.backLight = 5;
+}
 
 unsigned char dataSaveInit(void)
 {
@@ -27,17 +44,20 @@ unsigned char dataSaveInit(void)
 
     lfsHandle = fsInit(); //初始化文件系统
 
-	lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
-	lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+	int err = lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
+	if(err < 0)
+    {
+        dataSaveSetDefault();
+        keymapLoad(1);
+        return 1;
+    }
+	lfs_ssize_t readLen = lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
 
     printf("dataSaveInit %d\r\n",saveDataS.updateFlag);
 
-    if(saveDataS.updateFlag != UPDATE_FLAG)                                             //版本标志不一样，就恢复默认值
+    if(readLen != sizeof(saveDataS) || saveDataS.updateFlag != UPDATE_FLAG)                                             //版本标志不一样，就恢复默认值
     {
-        saveDataS.updateFlag = UPDATE_FLAG;
-        saveDataS.activeLayer = 1;
-        saveDataS.rate = 0;
-        saveDataS.statePageFunction = 2;
+        dataSaveSetDefault();
         
         lfs_file_rewind(lfsHandle, &lfsConfigData);                                         //刷新一个文件
 	    lfs_file_write(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //写入文件
@@ -45,6 +65,7 @@ unsigned char dataSaveInit(void)
         keymapLoad(1);
         return 0;
     }
+    dataSaveLimit();
     lfs_file_close(lfsHandle, &lfsConfigData);      
     keymapLoad(0);
     return 0;
@@ -53,16 +74,19 @@ unsigned char dataSaveInit(void)
 //获取存储的激活层信息
 unsigned char dataSaveGetActiveLayer(void)
 {
+    dataSaveLimit();
     return saveDataS.activeLayer;
 }
 //获取当前回报间隔
 unsigned char dataSaveGetRate(void)
 {
+    dataSaveLimit();
     return saveDataS.rate;
 }
 
 unsigned char dataSaveGetBackLight(void)
 {
+    dataSaveLimit();
     return saveDataS.backLight;
 }
 
@@ -70,6 +94,7 @@ unsigned char dataSaveGetBackLight(void)
 //状态页有个功能是可以自定义的
 unsigned char dataSaveGetStatePageFunction(void)
 {
+    dataSaveLimit();
     return saveDataS.statePageFunction;
 }
 
@@ -77,6 +102,7 @@ unsigned char dataSaveGetStatePageFunction(void)
 unsigned char dataSaveActiveLayer(unsigned char v)
 {
     lfs_file_t lfsConfigData; //存储配置的文件句柄
+    if(v < 1 || v > 4) v = 1;
 
     lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
     lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
@@ -93,6 +119,7 @@ unsigned char dataSaveActiveLayer(unsigned char v)
 unsigned char dataSaveRate(unsigned char v)
 {
     lfs_file_t lfsConfigData; //存储配置的文件句柄
+    if(v < 1 || v > 20) v = 1;
 
     lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
     lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件

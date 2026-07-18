@@ -142,6 +142,20 @@ const struct {
 struct repeating_timer ws2812PixeUpade;
 struct repeating_timer lightTimer;
 
+typedef enum {
+    CODEX_STATUS_IDLE = 0,
+    CODEX_STATUS_WORKING,
+    CODEX_STATUS_SUCCESS,
+    CODEX_STATUS_ERROR,
+    CODEX_STATUS_WAITING,
+} codex_status_t;
+
+static volatile unsigned char codexStatusActive = 0;
+static volatile codex_status_t codexStatus = CODEX_STATUS_IDLE;
+static unsigned int codexStatusTick = 0;
+static uint32_t codexWorkingColors[4] = {0};
+static unsigned int codexWorkingColorStep = 0xffffffff;
+
 bool ws2812PixeUpadeTimerHandle (repeating_timer_t *rt)
 {
     static unsigned int count = 0;
@@ -236,6 +250,7 @@ bool ws2812PixeUpadeTimerHandle2 (repeating_timer_t *rt)
 
 unsigned char ws2812Trigger(unsigned char mode,unsigned int frameNumber,unsigned char keyNumber)
 {
+    codexStatusActive = 0;
     pat = mode%count_of(pattern_table);
     franeCount = frameNumber;
     dir = (rand() >> 30) & 1 ? 1 : -1;
@@ -244,6 +259,147 @@ unsigned char ws2812Trigger(unsigned char mode,unsigned int frameNumber,unsigned
     add_repeating_timer_ms(10,ws2812PixeUpadeTimerHandle2,0,&ws2812PixeUpade);
     return 0;
 }
+
+static void ws2812CodexFill(uint32_t color)
+{
+    for (int i = 0; i < NUM_PIXELS; ++i) put_pixel(color);
+}
+
+static const unsigned char codexEdgeRing[] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8,
+    21, 34, 48, 62,
+    61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49,
+    35, 22, 9
+};
+
+static int ws2812CodexEdgePos(unsigned char led)
+{
+    for (int i = 0; i < count_of(codexEdgeRing); ++i)
+    {
+        if (codexEdgeRing[i] == led) return i;
+    }
+    return -1;
+}
+
+static void ws2812CodexFillEdge(uint32_t color)
+{
+    for (int led = 0; led < NUM_PIXELS; ++led)
+    {
+        put_pixel(ws2812CodexEdgePos((unsigned char)led) >= 0 ? color : 0);
+    }
+}
+
+static uint8_t ws2812CodexRandomComponent(void)
+{
+    return 16 + (rand() % 80);
+}
+
+static uint32_t ws2812CodexRandomColor(void)
+{
+    uint8_t r = ws2812CodexRandomComponent();
+    uint8_t g = ws2812CodexRandomComponent();
+    uint8_t b = ws2812CodexRandomComponent();
+    if ((r + g + b) < 96)
+    {
+        b += 48;
+    }
+    return urgb_u32(r, g, b);
+}
+
+static void ws2812CodexRandomizeWorkingColors(void)
+{
+    for (int i = 0; i < count_of(codexWorkingColors); ++i)
+    {
+        codexWorkingColors[i] = ws2812CodexRandomColor();
+    }
+}
+
+static void ws2812CodexRenderWorking(unsigned int tick)
+{
+    const unsigned int ringLen = count_of(codexEdgeRing);
+    unsigned int head = tick % ringLen;
+    if (head != codexWorkingColorStep)
+    {
+        codexWorkingColorStep = head;
+        ws2812CodexRandomizeWorkingColors();
+    }
+
+    for (int led = 0; led < NUM_PIXELS; ++led)
+    {
+        int pos = ws2812CodexEdgePos((unsigned char)led);
+        if (pos < 0)
+        {
+            put_pixel(0);
+            continue;
+        }
+
+        uint32_t color = 0;
+        for (int i = 0; i < count_of(codexWorkingColors); ++i)
+        {
+            if (((head + i) % ringLen) == (unsigned int)pos)
+            {
+                color = codexWorkingColors[i];
+                break;
+            }
+        }
+        put_pixel(color);
+    }
+}
+
+static void ws2812CodexRender(void)
+{
+    unsigned int tick = codexStatusTick++;
+
+    if (codexStatus == CODEX_STATUS_IDLE)
+    {
+        ws2812CodexFill(0);
+    }
+    else if (codexStatus == CODEX_STATUS_WORKING)
+    {
+        ws2812CodexRenderWorking(tick);
+    }
+    else if (codexStatus == CODEX_STATUS_SUCCESS)
+    {
+        ws2812CodexFill((tick % 24) < 12 ? urgb_u32(0, 48, 0) : 0);
+    }
+    else if (codexStatus == CODEX_STATUS_ERROR)
+    {
+        ws2812CodexFill((tick % 24) < 12 ? urgb_u32(64, 0, 0) : 0);
+    }
+    else if (codexStatus == CODEX_STATUS_WAITING)
+    {
+        unsigned int phase = tick % 50;
+        unsigned int level = phase < 25 ? phase : 49 - phase;
+        uint8_t r = (uint8_t)(level * 4);
+        uint8_t g = (uint8_t)(level * 3);
+        ws2812CodexFillEdge(urgb_u32(r, g, 0));
+    }
+}
+
+bool ws2812CodexTimerHandle(repeating_timer_t *rt)
+{
+    if (!codexStatusActive) return false;
+    ws2812CodexRender();
+    return true;
+}
+
+unsigned char ws2812CodexStatus(unsigned char status)
+{
+    if (status > CODEX_STATUS_WAITING) status = CODEX_STATUS_IDLE;
+    codexStatus = (codex_status_t)status;
+    codexStatusActive = 1;
+    codexStatusTick = 0;
+    PixelDataP = 0;
+    if (codexStatus == CODEX_STATUS_WORKING)
+    {
+        codexWorkingColorStep = 0xffffffff;
+        ws2812CodexRandomizeWorkingColors();
+    }
+    cancel_repeating_timer(&ws2812PixeUpade);
+    add_repeating_timer_ms(80,ws2812CodexTimerHandle,0,&ws2812PixeUpade);
+    return 0;
+}
+
 unsigned char ws2812Init(void)
 {
     PIO pio = pio1;
