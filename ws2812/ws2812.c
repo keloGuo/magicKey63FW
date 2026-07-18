@@ -400,6 +400,11 @@ unsigned char ws2812CodexStatus(unsigned char status)
     return 0;
 }
 
+unsigned char ws2812GetCodexStatus(void)
+{
+    return (unsigned char)codexStatus;
+}
+
 unsigned char ws2812Init(void)
 {
     PIO pio = pio1;

@@ -34,7 +34,7 @@ static void dataSaveLimit(void)
 {
     if(saveDataS.activeLayer < 1 || saveDataS.activeLayer > 4) saveDataS.activeLayer = 1;
     if(saveDataS.rate < 1 || saveDataS.rate > 20) saveDataS.rate = 1;
-    if(saveDataS.statePageFunction > 2) saveDataS.statePageFunction = 2;
+    if(saveDataS.statePageFunction > 3) saveDataS.statePageFunction = 2;
     if(saveDataS.backLight > 20) saveDataS.backLight = 5;
 }
 
@@ -150,6 +150,7 @@ unsigned char dataSaveBackLight(unsigned char v)
 unsigned char dataSaveStatePageFunction(unsigned char v)
 {
     lfs_file_t lfsConfigData; //存储配置的文件句柄
+    if(v > 3) v = 2;
 
     lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
     lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件

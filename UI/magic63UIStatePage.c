@@ -7,13 +7,56 @@
 #include "pageChangeLogic.h"
 #include "magic63UI.h"
 
-unsigned char showFuncNumber = 2; //灯光效果，APM, 回包率
-unsigned int showFuncNumberValuelist[] = {0,0,0};
-const char* showFuncNumberList[3] = { "light" ,"APM","rate" };
+#define STATE_PAGE_FUNC_COUNT 4
 
-//第一页的红能设置页。当前生效层，APM和灯效，回报率3选一
-lv_obj_t* FuncSetActiveTabList[3] = { NULL,NULL,NULL };
-lv_obj_t* FuncSetActiveTabDataList[3] = { NULL,NULL,NULL };
+unsigned char showFuncNumber = 2; //灯光效果，APM, 回包率, Codex状态
+unsigned int showFuncNumberValuelist[STATE_PAGE_FUNC_COUNT] = {0,0,0,0};
+const char* showFuncNumberList[STATE_PAGE_FUNC_COUNT] = { "light" ,"APM","rate","codex" };
+
+//第一页的功能设置页。当前生效层，APM、灯效、回报率、Codex状态选择一项显示
+lv_obj_t* FuncSetActiveTabList[STATE_PAGE_FUNC_COUNT] = { NULL,NULL,NULL,NULL };
+lv_obj_t* FuncSetActiveTabDataList[STATE_PAGE_FUNC_COUNT] = { NULL,NULL,NULL,NULL };
+static int FuncSetActiveCount = 0;
+
+unsigned char ws2812GetCodexStatus(void);
+
+static const char *statePageCodexStatusName(unsigned char status)
+{
+    switch (status)
+    {
+        case 1: return "active";
+        case 2: return "success";
+        case 3: return "error";
+        case 4: return "waiting";
+        default: return "idle";
+    }
+}
+
+static const lv_font_t *statePageFuncValueFont(unsigned char v)
+{
+    return (v == 3) ? &lv_font_montserrat_14 : &lv_font_montserrat_28;
+}
+
+static void statePageFuncValueText(unsigned char v, char *out, size_t outLen)
+{
+    if(v == 3)
+    {
+        snprintf(out, outLen, "%s", statePageCodexStatusName(ws2812GetCodexStatus()));
+    }
+    else
+    {
+        snprintf(out, outLen, "%d", showFuncNumberValuelist[v]);
+    }
+}
+
+static void statePageSetValueLabel(lv_obj_t *label, unsigned char v)
+{
+    if(label == NULL) return;
+    char tempValue[12] = {'\0'};
+    statePageFuncValueText(v, tempValue, sizeof(tempValue));
+    lv_label_set_text(label, tempValue);
+    lv_obj_set_style_text_font(label, statePageFuncValueFont(v), LV_PART_MAIN | LV_STATE_DEFAULT);
+}
 
 //更新3个虚拟的led灯
 lv_obj_t* VirtuallyLed[3] = {NULL,NULL,NULL};
@@ -119,11 +162,10 @@ unsigned char upadtaStatePageShow(lv_obj_t* T, unsigned char v)
 {
     static lv_obj_t* tName = NULL;
     static lv_obj_t* tValue = NULL;
-    char tempValue[] = "     ";
+    if(v >= STATE_PAGE_FUNC_COUNT) v = 2;
+
     if ((T != NULL) && (tName == NULL)) //初始化
     {
-        sprintf(tempValue, "%d", showFuncNumberValuelist[showFuncNumber]);
-
         lv_obj_t* layerCont = lv_label_create(T);
         lv_label_set_text(layerCont, "");
         lv_obj_set_size(layerCont, 50, 60);
@@ -145,29 +187,44 @@ unsigned char upadtaStatePageShow(lv_obj_t* T, unsigned char v)
         lv_obj_set_style_radius(tName, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
 
         tValue = lv_label_create(T);
-        lv_label_set_text(tValue, tempValue);
+        statePageSetValueLabel(tValue, showFuncNumber);
         lv_obj_set_size(tValue, 50, 30);
         lv_obj_set_pos(tValue, 105, 37);
 
         lv_obj_set_style_text_color(tValue, lv_color_make(0xff, 0xff, 0xff), 0);
         lv_obj_set_style_bg_opa(tValue, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_align(tValue, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_text_font(tValue, &lv_font_montserrat_28, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_pad_top(tValue, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_radius(tValue, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
     }
     else
     {
-        sprintf(tempValue, "%d", showFuncNumberValuelist[v]);
         lv_label_set_text(tName, showFuncNumberList[v]);
+        if(showFuncNumber != v)
+        {
+            unsigned char dataSaveStatePageFunction(unsigned char v);
+            dataSaveStatePageFunction(v);
+        }
         showFuncNumber = v;
-        unsigned char dataSaveStatePageFunction(unsigned char v);
-        dataSaveStatePageFunction(showFuncNumber);
-        lv_label_set_text(tValue, tempValue);
-        lv_label_set_text( FuncSetActiveTabDataList[v], tempValue);
+        statePageSetValueLabel(tValue, v);
+        statePageSetValueLabel(FuncSetActiveTabDataList[v], v);
 
     }
     return 0;
+}
+
+static void statePageCodexTimer(lv_timer_t *timer)
+{
+    (void)timer;
+    unsigned char status = ws2812GetCodexStatus();
+    if(showFuncNumberValuelist[3] == status) return;
+
+    showFuncNumberValuelist[3] = status;
+    statePageSetValueLabel(FuncSetActiveTabDataList[3], 3);
+    if(showFuncNumber == 3)
+    {
+        upadtaStatePageShow(NULL, 3);
+    }
 }
 
 //第一个主页，显示一些状态，固定显示3个灯，当前生效层，APM和灯效，回报率3选一
@@ -221,28 +278,25 @@ pageInfo* magic63UIStatePageShow(lv_obj_t* temp)
 
 int PageFuncSetActiveChange(int t,int x,int k)
 {
-    static int count = 0;
     if ((t == 1) || (t == -1))
     {
-        count += t;
-        if (count > 2) count = 0;
-        if (count < 0) count = 2;
-        lv_obj_scroll_to_view_recursive(FuncSetActiveTabList[count], LV_ANIM_ON);
-        upadtaStatePageShow(NULL, count);
+        FuncSetActiveCount += t;
+        if (FuncSetActiveCount >= STATE_PAGE_FUNC_COUNT) FuncSetActiveCount = 0;
+        if (FuncSetActiveCount < 0) FuncSetActiveCount = STATE_PAGE_FUNC_COUNT - 1;
+        lv_obj_scroll_to_view_recursive(FuncSetActiveTabList[FuncSetActiveCount], LV_ANIM_ON);
+        upadtaStatePageShow(NULL, FuncSetActiveCount);
 
-        lv_obj_t* t = FuncSetActiveTabDataList[count];
-        char tempValue[] = "     ";
-        sprintf(tempValue, "%d", showFuncNumberValuelist[count]);
-        lv_label_set_text(t, tempValue);
+        lv_obj_t* t = FuncSetActiveTabDataList[FuncSetActiveCount];
+        statePageSetValueLabel(t, FuncSetActiveCount);
         lv_obj_set_size(t, 50, 30);
         lv_obj_align(t, LV_ALIGN_CENTER, 0, 12);
     }
     else if(t>1)
     {
-        count = t - 2;
-        count %= 3;
-        lv_obj_scroll_to_view_recursive(FuncSetActiveTabList[count], LV_ANIM_ON);
-        upadtaStatePageShow(NULL, count);
+        FuncSetActiveCount = t - 2;
+        FuncSetActiveCount %= STATE_PAGE_FUNC_COUNT;
+        lv_obj_scroll_to_view_recursive(FuncSetActiveTabList[FuncSetActiveCount], LV_ANIM_ON);
+        upadtaStatePageShow(NULL, FuncSetActiveCount);
     }
     return 0;
 }
@@ -251,11 +305,12 @@ unsigned char getFlashRateInfo(void);
 
 unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
 {
-    char tempValue[] = "     ";
-
     showFuncNumberValuelist[0] =  getFlashBackLightInfo();
     showFuncNumberValuelist[1] =  0;
     showFuncNumberValuelist[2] =  getFlashRateInfo();
+    showFuncNumberValuelist[3] =  ws2812GetCodexStatus();
+    if(showFuncNumber >= STATE_PAGE_FUNC_COUNT) showFuncNumber = 2;
+    FuncSetActiveCount = showFuncNumber;
 
     lv_obj_t* tabview;
     tabview = lv_tabview_create(temp, LV_DIR_BOTTOM, 1);
@@ -288,8 +343,7 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
 
     t = lv_label_create(FuncSetActiveTabList[0]);
     FuncSetActiveTabDataList[0] = t;
-    sprintf(tempValue, "%d", showFuncNumberValuelist[0]);
-    lv_label_set_text(t, tempValue);
+    statePageSetValueLabel(t, 0);
     lv_obj_set_size(t, 50, 30);
     lv_obj_align(t, LV_ALIGN_CENTER, 0, 12);
 
@@ -297,7 +351,6 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
     lv_obj_set_style_bg_color(t, lv_color_make(0x00, 0x0, 0x00), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(t, &lv_font_montserrat_28, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_top(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_radius(t, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -320,8 +373,7 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
 
     t = lv_label_create(FuncSetActiveTabList[1]);
     FuncSetActiveTabDataList[1] = t;
-    sprintf(tempValue, "%d", showFuncNumberValuelist[1]);
-    lv_label_set_text(t, tempValue);
+    statePageSetValueLabel(t, 1);
     lv_obj_set_size(t, 50, 30);
     lv_obj_align(t, LV_ALIGN_CENTER, 0, 12);
 
@@ -329,7 +381,6 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
     lv_obj_set_style_bg_color(t, lv_color_make(0x00, 0x0, 0x00), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(t, &lv_font_montserrat_28, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_top(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_radius(t, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -352,8 +403,7 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
 
     t = lv_label_create(FuncSetActiveTabList[2]);
     FuncSetActiveTabDataList[2] = t;
-    sprintf(tempValue, "%d", showFuncNumberValuelist[2]);
-    lv_label_set_text(t, tempValue);
+    statePageSetValueLabel(t, 2);
     lv_obj_set_size(t, 50, 30);
     lv_obj_align(t, LV_ALIGN_CENTER, 0, 12);
 
@@ -361,11 +411,40 @@ unsigned char PageFuncSetActiveInit(lv_obj_t* temp)
     lv_obj_set_style_bg_color(t, lv_color_make(0x00, 0x0, 0x00), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(t, &lv_font_montserrat_28, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_top(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_radius(t, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    //PageFuncSetActiveChange(2);
+    FuncSetActiveTabList[3] = lv_tabview_add_tab(tabview, " ");
+    lv_obj_set_style_border_color(FuncSetActiveTabList[3], lv_color_make(0xff, 0, 0), 0);
+    lv_obj_set_style_border_width(FuncSetActiveTabList[3], 0, 0);
+    lv_obj_set_style_pad_all(FuncSetActiveTabList[3], 0, 0);
+
+    t = lv_label_create(FuncSetActiveTabList[3]);
+    lv_label_set_text(t, "codex");
+    lv_obj_set_size(t, 50, 20);
+    lv_obj_align(t, LV_ALIGN_CENTER, 0, -18);
+
+    lv_obj_set_style_text_color(t, lv_color_make(0x0, 0x0, 0x0), 0);
+    lv_obj_set_style_bg_color(t, lv_color_make(0x00, 0x0, 0x00), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(t, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(t, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    t = lv_label_create(FuncSetActiveTabList[3]);
+    FuncSetActiveTabDataList[3] = t;
+    statePageSetValueLabel(t, 3);
+    lv_obj_set_size(t, 50, 30);
+    lv_obj_align(t, LV_ALIGN_CENTER, 0, 12);
+
+    lv_obj_set_style_text_color(t, lv_color_make(0xff, 0xff, 0xff), 0);
+    lv_obj_set_style_bg_color(t, lv_color_make(0x00, 0x0, 0x00), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(t, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(t, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_scroll_to_view_recursive(FuncSetActiveTabList[showFuncNumber], LV_ANIM_OFF);
     return 0;
 }
 
@@ -428,6 +507,7 @@ lv_obj_t* magic63UIStatePageinit(lv_obj_t* temp)
 
     pageInfo* tempPage =  magic63UIStatePageShow(tabview);
     magic63UIStatePageFuncSet(tabview, tempPage);
+    lv_timer_create(statePageCodexTimer, 250, NULL);
    
     return T;
 }
