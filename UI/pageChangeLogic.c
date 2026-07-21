@@ -385,8 +385,70 @@ pageInfo* pageRegister(pageInfo* tempHomepage,lv_obj_t* pageHandleX, lv_obj_t* p
 
 static int t = 0;
 static unsigned char key = 0;
+static volatile unsigned char jumpPageIndex = 0xff;
+
+static pageInfo *pageFindMainIndex(unsigned char index)
+{
+	if(pageHand == NULL) return NULL;
+	if(index == 0) index = 1;
+
+	pageInfo *target = pageHand;
+	for(unsigned char i = 1; i < index; i++)
+	{
+		target = target->nextPage;
+		if(target == pageHand) return NULL;
+	}
+	if(target->homepage != NULL) return NULL;
+	return target;
+}
+
+static unsigned char pageJumpToTarget(pageInfo *target)
+{
+	if(target == NULL) return 1;
+	if(Activated == target) return 0;
+
+	pageInfo *oldPage = Activated;
+	if(oldPage != NULL && oldPage->keyHandleCallback != NULL) oldPage->keyHandleCallback(0, -1, 0);
+	Activated = target;
+	lv_obj_scroll_to_view_recursive(Activated->pageHandleX, LV_ANIM_ON);
+	lv_obj_scroll_to_view_recursive(Activated->pageHandleY, LV_ANIM_ON);
+	if(Activated->keyHandleCallback != NULL) Activated->keyHandleCallback(0, 1, 0);
+	return 0;
+}
+
+unsigned char pageJumpToMainIndex(unsigned char index)
+{
+	return pageJumpToTarget(pageFindMainIndex(index));
+}
+
+unsigned char pageJumpToSubIndex(unsigned char index)
+{
+	pageInfo *target = pageFindMainIndex(index);
+	if(target == NULL || target->subpage == NULL) return 1;
+	return pageJumpToTarget(target->subpage);
+}
+
+static unsigned char pageJumpByCode(unsigned char code)
+{
+	if(code & 0x80) return pageJumpToSubIndex(code & 0x7f);
+	return pageJumpToMainIndex(code);
+}
+
+void pageJumpRequest(unsigned char index)
+{
+	multicore_lockout_start_blocking();
+	jumpPageIndex = index;
+	multicore_lockout_end_blocking();
+}
+
 bool encoderProcess(repeating_timer_t *rt)  //t是，左右滑，key是按键是否按下
 {
+	if(jumpPageIndex != 0xff)
+	{
+		unsigned char index = jumpPageIndex;
+		jumpPageIndex = 0xff;
+		pageJumpByCode(index);
+	}
 	if(t == 0 && key == 0) return 1;
 	//userPrintf("temp encoderCallback %d %d %d\r\n ", t,key, Activated->homepage == NULL);
 	if ((Activated->homepage == NULL)) //当前在母页

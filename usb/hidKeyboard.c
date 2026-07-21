@@ -42,6 +42,7 @@ void ws2812MacroPlayKey(unsigned char ledIndex, unsigned char pressed);
 void debugStage(unsigned char core, unsigned int stage);
 void debugEvent(const char *tag, int value);
 void debugEventText(const char *tag, const char *text, int value);
+void pageJumpRequest(unsigned char index);
 static unsigned char macroLedByXY(unsigned char x, unsigned char y);
 
 static macro_data_t macroActive;
@@ -400,6 +401,7 @@ bool keyMatrix2ReportData(repeating_timer_t *rt)
     unsigned short data[5] =        {0,0,0,0,0};
     static unsigned short keyDataBack[5] = {0,0,0,0,0};
     static unsigned short macroKeyDataBack[5] = {0,0,0,0,0};
+    static unsigned short pageKeyDataBack[5] = {0,0,0,0,0};
     static unsigned short recordKeyDataBack[5] = {0,0,0,0,0};
     unsigned short *keyData = getDataBuff();
     unsigned char jmp = 0;
@@ -476,6 +478,12 @@ bool keyMatrix2ReportData(repeating_timer_t *rt)
                 if(macroRunning && macroId == macroSourceId && down) macroSourceDown = 1;
                 if(down && oldDown == 0 && macroRunning == 0) macroStart(macroId);
             }
+            else if((t >> 8) == 0x05)   //屏幕功能页跳转
+            {
+                if(recordBlocksOutput) continue;
+                unsigned char oldDown = ((pageKeyDataBack[i]) & (0x0001 << j)) != 0;
+                if(down && oldDown == 0) pageJumpRequest(t & 0xff);
+            }
             else
             {   
                 if(recordBlocksOutput) continue;
@@ -494,6 +502,7 @@ bool keyMatrix2ReportData(repeating_timer_t *rt)
     macroApplyReports(temp, &sendBuffMediaNew, &sendBuffMouseNew);
     unsigned char macroKeyboardActiveNow = macroRunning || macroKeyboardOutputActive();
     memcpy(macroKeyDataBack, data, 10);
+    memcpy(pageKeyDataBack, data, 10);
     memcpy(recordKeyDataBack, data, 10);
     if(((getlayerTempNumber() !=0xff )&& (jmp == 0)) || macroKeyboardActiveNow || macroKeyboardReportActive)   tud_hid_n_report(0,0,temp,16);
     macroKeyboardReportActive = macroKeyboardActiveNow;

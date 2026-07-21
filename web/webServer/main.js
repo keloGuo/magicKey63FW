@@ -11,6 +11,7 @@ window.onload = function () {
     virtualKeyboardKeylistenMedia();
     virtualKeyboardKeylistenMouse();
     virtualKeyboardKeylistenLayer();
+    virtualKeyboardKeylistenPage();
     layerKeylisten();
     deviceControlListen();
     pageControlListen();
@@ -265,6 +266,46 @@ function virtualkeyBoardKeyHandleLayer(v) //虚拟键盘普通按键被被选中
     console.log(numID,numValue+8,activationKeyId);
 }
 
+function virtualkeyBoardKeyHandlePage(v)
+{
+    if(currentPage == "macro")
+    {
+        return 0;
+    }
+    if(activationKeyId == 0xff) return 0;
+
+    var idPrefix = v.target.id.slice(0, 3);
+    var numValue = parseInt(v.target.id.slice(3));
+    if(numValue <= 0) return 0;
+    if(idPrefix == "IDQ") numValue = numValue | 0x80;
+
+    var temp = activationKeyId.slice(5);
+    var numID = parseInt(temp);
+
+    keymapSet(numID, numValue + 0x0500);
+
+    document.getElementById(activationKeyId).innerHTML = v.target.getAttribute("name");
+    document.getElementById(activationKeyId).style.background = "#ffffff";
+    if(numID == 71) activationKeyId = 'keyId'+ (79);
+    else if(numID == 79) activationKeyId = 'keyId'+ (70);
+    else if(numID == 70) activationKeyId = 'keyId'+ (71);
+    else
+    {
+        for(var i = 1;;i++)
+        {
+            var nextId = numID + i;
+            if(nextId == 71 || nextId == 79 || nextId == 70)
+            {
+                nextId += 1;
+            }
+            if(nextId > 80) nextId = nextId - 80;
+            activationKeyId = 'keyId'+ (nextId);
+            if(document.getElementById(activationKeyId) != null) break;
+        }
+    }
+    document.getElementById(activationKeyId).style.background = "red";
+}
+
 function macroBindKeyHandle(v)
 {
     if(currentPage != "keyboard") return 0;
@@ -397,6 +438,21 @@ function virtualKeyboardKeylistenLayer() //虚拟键盘按键监听
             var tempId = '#' + that.id;
             document.querySelector(tempId).addEventListener('click', virtualkeyBoardKeyHandleLayer);
         }   
+    }
+}
+
+function virtualKeyboardKeylistenPage()
+{
+    var pageIds = ["IDP1","IDP2","IDP3","IDP4","IDP5","IDP6","IDP7","IDP8","IDP9",
+                   "IDQ1","IDQ2","IDQ3","IDQ4","IDQ6","IDQ8"];
+    for(var i = 0;i<pageIds.length;i++)
+    {
+        var that = document.getElementById(pageIds[i]);
+        if(that != null)
+        {
+            var tempId = '#' + that.id;
+            document.querySelector(tempId).addEventListener('click', virtualkeyBoardKeyHandlePage);
+        }
     }
 }
 
@@ -1651,6 +1707,13 @@ function webServerDataHandle(v)
             {
                 var number = (obj.keyMap[i]  & 0xff);
                 idShow = "M" + number;
+            }
+            else if((obj.keyMap[i] >> 8)  == 5 )
+            {
+                var number = (obj.keyMap[i]  & 0xff);
+                var tempID = (number & 0x80) ? ('IDQ' + (number & 0x7f)) : ('IDP' + number);
+                var tempObj = document.getElementById(tempID);
+                if(tempObj != null) idShow = tempObj.getAttribute("name");
             }
             else if((obj.keyMap[i] >> 8)  > 0 ) 
             {
