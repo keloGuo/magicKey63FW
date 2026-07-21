@@ -1,7 +1,8 @@
 
 /.vscode
+/.agents
+/.codex
 /zbuild
 /build
-/lib
 __pycache__/
 *.pyc
