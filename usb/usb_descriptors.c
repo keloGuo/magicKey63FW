@@ -25,6 +25,7 @@
 // Modified by Cesanta Software
 
 #include "tusb.h"
+#include "../magic63_config.h"
 
 /* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
  * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
@@ -55,8 +56,10 @@ enum
   ITF_NUM_HID1,
   ITF_NUM_HID2,
   ITF_NUM_HID3,
+#if MAGIC63_ENABLE_USB_CDC_DEBUG
   ITF_NUM_CDC_0,
   ITF_NUM_CDC_0_DATA,
+#endif
   ITF_NUM_TOTAL
 };
 
@@ -236,7 +239,7 @@ uint8_t const desc_hid_report2[] =
     0x15,0x81,0x25,0x7f,0x75,0x08,0x95,0x03,
     0x81,0x06,0xC0,0xC0
 };
-extern unsigned char reportBuff[179];
+extern unsigned char reportBuff[495];
 
 const uint8_t *descHid[] = {desc_hid_report0,desc_hid_report1,desc_hid_report2,reportBuff};
 
@@ -252,7 +255,7 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
-#define MAIN_CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_RNDIS_DESC_LEN +  TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_CDC_DESC_LEN)  // + TUD_MSC_DESC_LEN TUD_HID_INOUT_DESC_LEN
+#define MAIN_CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_RNDIS_DESC_LEN +  TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + TUD_HID_DESC_LEN + (MAGIC63_ENABLE_USB_CDC_DEBUG ? TUD_CDC_DESC_LEN : 0))  // + TUD_MSC_DESC_LEN TUD_HID_INOUT_DESC_LEN
 
 #define EPNUM_HID0          0x01
 #define EPNUM_HID1          0x02
@@ -261,9 +264,11 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t itf)
 #define EPNUM_NET_NOTIF     0x85
 #define EPNUM_NET_OUT       0x06
 #define EPNUM_NET_IN        0x86
+#if MAGIC63_ENABLE_USB_CDC_DEBUG
 #define EPNUM_CDC_0_NOTIF   0x87
 #define EPNUM_CDC_0_OUT     0x07
 #define EPNUM_CDC_0_IN      0x88
+#endif
 
 uint8_t rndis_configuration[] =
 {
@@ -278,7 +283,9 @@ uint8_t rndis_configuration[] =
   TUD_HID_DESCRIPTOR(ITF_NUM_HID2, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report2), EPNUM_HID2 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
   TUD_HID_DESCRIPTOR(ITF_NUM_HID3, 0, HID_ITF_PROTOCOL_NONE, sizeof(reportBuff), EPNUM_HID3 |0x80, CFG_TUD_HID_EP_BUFSIZE, 1),
 
+#if MAGIC63_ENABLE_USB_CDC_DEBUG
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC_0, 0, EPNUM_CDC_0_NOTIF, 8, EPNUM_CDC_0_OUT, EPNUM_CDC_0_IN, 64),
+#endif
 //  TUD_HID_INOUT_DESCRIPTOR(ITF_NUM_HID1, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report1), EPNUM_HID1, 0x80 | EPNUM_HID1, CFG_TUD_HID_EP_BUFSIZE, 10),
 };
 

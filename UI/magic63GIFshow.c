@@ -21,11 +21,36 @@ unsigned char getGifPlaying(void)
 }
 
 static unsigned char PlayState = 1;
+void GifPlayDoneOver_cb(lv_event_t * event);
+
+static unsigned char gifCreate(void)
+{
+    if(img != NULL) return 0;
+    if(tab == NULL) return 1;
+
+    img = lv_gif_create(tab);
+    if(img == NULL) return 1;
+    lv_gif_set_src(img, &HCR);
+    lv_gif_pause(img);
+    lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_add_event_cb(img, GifPlayDoneOver_cb, LV_EVENT_READY, NULL);
+    PlayState = 1;
+    return 0;
+}
+
+static void gifDestroy(void)
+{
+    if(img == NULL) return;
+    lv_obj_del(img);
+    img = NULL;
+}
+
 int PageGifChangeCallback(int t,int inOrOut,int k) //0,没有按键，1是短按，2是长按
 {
     if(inOrOut == 1)
     {
         printf("in  Page Gif \n");
+        if(gifCreate() != 0) return 0;
         gifPlaying = 1;
         lv_gif_resume(img);
         return 0;
@@ -33,7 +58,8 @@ int PageGifChangeCallback(int t,int inOrOut,int k) //0,没有按键，1是短按
     else if(inOrOut == -1)
     {
          printf("out  Page Gif \n");
-         lv_gif_pause(img);
+         if(img != NULL) lv_gif_pause(img);
+         gifDestroy();
          gifPlaying = 0;
  
         return 0;       
@@ -41,6 +67,7 @@ int PageGifChangeCallback(int t,int inOrOut,int k) //0,没有按键，1是短按
     
     if(k == 1) //暂停和继续
     {
+        if(img == NULL && gifCreate() != 0) return 0;
         if(PlayState % 2) lv_gif_pause(img);
         else lv_gif_resume(img);
         PlayState ++;
@@ -120,14 +147,6 @@ pageInfo* magic63GifPlayPageSet(lv_obj_t* temp,pageInfo* homePage)
     lv_obj_remove_style(T1, NULL, LV_PART_SCROLLBAR);
     tab = T1;
 
-    img = lv_gif_create(T1);
-    lv_gif_set_src(img, &HCR);
-    lv_gif_pause(img);
-    lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
-
-    void GifPlayDoneOver_cb(lv_event_t * event);
-    lv_obj_add_event_cb(img, GifPlayDoneOver_cb, LV_EVENT_READY, NULL); 	//添加事件回调
-
     pageRegister(homePage, temp, T, PageGifChangeCallback);
  
     return NULL;
@@ -142,15 +161,8 @@ void GifPlayDoneOver_cb(lv_event_t * event)						//事件回调函数
 
 unsigned char gifReload(void)
 {
-    lv_obj_del(img);
-    img = lv_gif_create(tab);
-    lv_gif_set_src(img, &HCR);
-    lv_gif_pause(img);
-    lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
-
-    void GifPlayDoneOver_cb(lv_event_t * event);
-    lv_obj_add_event_cb(img, GifPlayDoneOver_cb, LV_EVENT_READY, NULL); 	//添加事件回调
-    return 0;
+    gifDestroy();
+    return gifCreate();
 }
 
 lv_obj_t* magic63UIGifPageinit(lv_obj_t* temp)

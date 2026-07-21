@@ -16,6 +16,33 @@ static unsigned int gongDeCountH = 0;   //功德计数器整百
 static lv_obj_t* gongDeCountShow = NULL;       //功德整百显示控件对象
 static lv_obj_t* gongDeBar = NULL;             //功德进度条对象
 static lv_obj_t* gongDeGif = NULL;             //功德gif 对象
+static lv_obj_t* gongDeGifParent = NULL;        //功德gif 父容器
+
+void gongDeGifPlayDoneOver_cb(lv_event_t * event);
+void lv_gif_restart(lv_obj_t * gif);
+
+static unsigned char gongDeGifCreate(void)
+{
+    if(gongDeGif != NULL) return 0;
+    if(gongDeGifParent == NULL) return 1;
+
+    gongDeGif = lv_gif_create(gongDeGifParent);
+    if(gongDeGif == NULL) return 1;
+    lv_gif_set_src(gongDeGif, &sbmy);
+    lv_obj_align(gongDeGif, LV_ALIGN_CENTER, -40, 0);
+    lv_obj_add_event_cb(gongDeGif, gongDeGifPlayDoneOver_cb, LV_EVENT_READY, NULL);
+    lv_gif_pause(gongDeGif);
+    gongDeBusy = 0;
+    return 0;
+}
+
+static void gongDeGifDestroy(void)
+{
+    if(gongDeGif == NULL) return;
+    lv_obj_del(gongDeGif);
+    gongDeGif = NULL;
+    gongDeBusy = 0;
+}
 
 unsigned char getGamePlaying(void)
 {
@@ -39,6 +66,7 @@ unsigned char gongDePP(void) //检测到有按键按下，功德加1
 
     if(gongDeing == 1 && gongDeBusy == 0)       //当前在功德页面，且gif没有在播放
     {
+        if(gongDeGif == NULL && gongDeGifCreate() != 0) return 0;
         lv_arc_set_value(gongDeBar, gongDeCount); //更新进度条
         gongDeBusy = 1;                           //设置为播放中
         lv_gif_restart(gongDeGif);                //重新开始播放
@@ -53,6 +81,7 @@ static int PageGongDeGanmeCallback(int t,int inOrOut,int k)
     {
         printf("in  Page gongde game \n");
         gongDeing = 1;
+        gongDeGifCreate();
         lv_arc_set_value(gongDeBar, gongDeCount); //更新进度条
         char temp[5] = {'\0','\0','\0','\0','\0'};
         sprintf(temp,"%d",gongDeCountH);
@@ -62,6 +91,7 @@ static int PageGongDeGanmeCallback(int t,int inOrOut,int k)
     else if(inOrOut == -1)
     {
         gongDeing = 0;           //退出了功德页
+        gongDeGifDestroy();
         return 0;       
     }
     return 0;
@@ -136,12 +166,7 @@ static pageInfo* magic63GongDePageSet(lv_obj_t* temp,pageInfo* homePage)
     lv_obj_set_style_border_width(T1, 0, 0);
     lv_obj_set_style_pad_all(T1, 0, 0);
     lv_obj_remove_style(T1, NULL, LV_PART_SCROLLBAR);
-
-    gongDeGif = lv_gif_create(T1);
-    lv_gif_set_src(gongDeGif, &sbmy);
-    lv_obj_align(gongDeGif, LV_ALIGN_CENTER, -40, 0);
-    void gongDeGifPlayDoneOver_cb(lv_event_t * event);
-    lv_obj_add_event_cb(gongDeGif, gongDeGifPlayDoneOver_cb, LV_EVENT_READY, NULL); 	//添加事件回调
+    gongDeGifParent = T1;
 
 
     gongDeBar = lv_arc_create(T1);
@@ -177,8 +202,7 @@ static pageInfo* magic63GongDePageSet(lv_obj_t* temp,pageInfo* homePage)
 void gongDeGifPlayDoneOver_cb(lv_event_t * event)						//事件回调函数
 {
 	printf("img my_event_cb %d\n",event->code);
-    void lv_gif_pause(lv_obj_t * obj);
-    lv_gif_pause(gongDeGif);
+    if(gongDeGif != NULL) lv_gif_pause(gongDeGif);
     gongDeBusy = 0;
 }
 

@@ -94,9 +94,9 @@ void lv_port_disp_init(void)
 
     /* Example for 1) */
     static lv_disp_draw_buf_t draw_buf_dsc_1;
-    static lv_color_t buf_1[MY_DISP_HOR_RES * MY_DISP_VER_RES];                          /*A buffer for 10 rows*/
-    static lv_color_t buf_2[MY_DISP_HOR_RES * MY_DISP_VER_RES];                          /*A buffer for 10 rows*/
-    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, buf_2, MY_DISP_HOR_RES * MY_DISP_VER_RES);   /*Initialize the display buffer*/
+    static lv_color_t buf_1[MY_DISP_HOR_RES * MY_DISP_VER_RES];
+    static lv_color_t buf_2[MY_DISP_HOR_RES * MY_DISP_VER_RES];
+    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, buf_2, MY_DISP_HOR_RES * MY_DISP_VER_RES);
 
     /* Example for 2) */
     //static lv_disp_draw_buf_t draw_buf_dsc_2;
@@ -191,10 +191,6 @@ static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
         //void LcdPush();
         //LcdPush();
     }
-
-    /*IMPORTANT!!!
-     *Inform the graphics library that you are ready with the flushing*/
-    //lv_disp_flush_ready(disp_drv);
 }
 
 // unsigned char lcdPushOver(void)

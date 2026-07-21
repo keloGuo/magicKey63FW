@@ -3,6 +3,8 @@
 extern unsigned short  *keymapList[]; 
 unsigned char keymapLoad(unsigned char init);
 lfs_t * fsInit(void);
+void debugStage(unsigned char core, unsigned int stage);
+void debugEvent(const char *tag, int value);
 //不同版本之间如果数据结构发生变化，就修改这个值，初始化的时候比对，不一样就重新恢复默认值
 #define UPDATE_FLAG 0x03
 static struct saveData {
@@ -38,13 +40,33 @@ static void dataSaveLimit(void)
     if(saveDataS.backLight > 20) saveDataS.backLight = 5;
 }
 
+static int dataSaveOpenConfig(lfs_file_t *file)
+{
+    debugStage(0, 22);
+    int err = lfs_file_open(lfsHandle, file, "configData", LFS_O_RDWR | LFS_O_CREAT);
+    if(err < 0) debugEvent("cfg_open_fail", err);
+    return err;
+}
+
+static int dataSaveWriteConfig(lfs_file_t *file)
+{
+    lfs_file_rewind(lfsHandle, file);
+    lfs_ssize_t len = lfs_file_write(lfsHandle, file, &saveDataS, sizeof(saveDataS));
+    if(len != sizeof(saveDataS))
+    {
+        debugEvent("cfg_write_fail", (int)len);
+        return -1;
+    }
+    return 0;
+}
+
 unsigned char dataSaveInit(void)
 {
     lfs_file_t lfsConfigData; //存储配置的文件句柄
 
     lfsHandle = fsInit(); //初始化文件系统
 
-	int err = lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
+	int err = dataSaveOpenConfig(&lfsConfigData);  //打开文件，没有就创建
 	if(err < 0)
     {
         dataSaveSetDefault();
@@ -59,8 +81,7 @@ unsigned char dataSaveInit(void)
     {
         dataSaveSetDefault();
         
-        lfs_file_rewind(lfsHandle, &lfsConfigData);                                         //刷新一个文件
-	    lfs_file_write(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //写入文件
+        dataSaveWriteConfig(&lfsConfigData);           //写入文件
         lfs_file_close(lfsHandle, &lfsConfigData);                                          //关闭文件
         keymapLoad(1);
         return 0;
@@ -104,13 +125,13 @@ unsigned char dataSaveActiveLayer(unsigned char v)
     lfs_file_t lfsConfigData; //存储配置的文件句柄
     if(v < 1 || v > 4) v = 1;
 
-    lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
-    lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+    if(dataSaveOpenConfig(&lfsConfigData) < 0) return 1;  //打开文件，没有就创建
+    lfs_ssize_t readLen = lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+    if(readLen != sizeof(saveDataS)) debugEvent("cfg_read_fail", (int)readLen);
     
     saveDataS.activeLayer = v;
 
-    lfs_file_rewind(lfsHandle, &lfsConfigData);                                         //刷新一个文件
-    lfs_file_write(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //写入文件
+    dataSaveWriteConfig(&lfsConfigData);           //写入文件
     lfs_file_close(lfsHandle, &lfsConfigData);                                          //关闭文件
 
     return 0;
@@ -121,13 +142,13 @@ unsigned char dataSaveRate(unsigned char v)
     lfs_file_t lfsConfigData; //存储配置的文件句柄
     if(v < 1 || v > 20) v = 1;
 
-    lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
-    lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+    if(dataSaveOpenConfig(&lfsConfigData) < 0) return 1;  //打开文件，没有就创建
+    lfs_ssize_t readLen = lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+    if(readLen != sizeof(saveDataS)) debugEvent("cfg_read_fail", (int)readLen);
     
     saveDataS.rate = v;
     
-    lfs_file_rewind(lfsHandle, &lfsConfigData);                                         //刷新一个文件
-    lfs_file_write(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //写入文件
+    dataSaveWriteConfig(&lfsConfigData);           //写入文件
     lfs_file_close(lfsHandle, &lfsConfigData);                                          //关闭文件
     return 0;
 }
@@ -136,13 +157,13 @@ unsigned char dataSaveBackLight(unsigned char v)
 {
     lfs_file_t lfsConfigData; //存储配置的文件句柄
 
-    lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
-    lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+    if(dataSaveOpenConfig(&lfsConfigData) < 0) return 1;  //打开文件，没有就创建
+    lfs_ssize_t readLen = lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+    if(readLen != sizeof(saveDataS)) debugEvent("cfg_read_fail", (int)readLen);
     
     saveDataS.backLight = v;
     
-    lfs_file_rewind(lfsHandle, &lfsConfigData);                                         //刷新一个文件
-    lfs_file_write(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //写入文件
+    dataSaveWriteConfig(&lfsConfigData);           //写入文件
     lfs_file_close(lfsHandle, &lfsConfigData);                                          //关闭文件
     return 0;
 }
@@ -152,13 +173,13 @@ unsigned char dataSaveStatePageFunction(unsigned char v)
     lfs_file_t lfsConfigData; //存储配置的文件句柄
     if(v > 3) v = 2;
 
-    lfs_file_open(lfsHandle, &lfsConfigData, "configData", LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
-    lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+    if(dataSaveOpenConfig(&lfsConfigData) < 0) return 1;  //打开文件，没有就创建
+    lfs_ssize_t readLen = lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
+    if(readLen != sizeof(saveDataS)) debugEvent("cfg_read_fail", (int)readLen);
     
     saveDataS.statePageFunction = v;
     
-    lfs_file_rewind(lfsHandle, &lfsConfigData);                                         //刷新一个文件
-    lfs_file_write(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //写入文件
+    dataSaveWriteConfig(&lfsConfigData);           //写入文件
     lfs_file_close(lfsHandle, &lfsConfigData);                                          //关闭文件
     return 0;
 }
@@ -211,13 +232,24 @@ unsigned char keymapLoad(unsigned char init)
     {
         char temp[30] = {'\0'};
         sprintf(temp,"keymapLayer%d",i);
-        lfs_file_open(lfsHandle, &keymap, temp, LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
+        debugStage(0, 22);
+        int err = lfs_file_open(lfsHandle, &keymap, temp, LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
+        if(err < 0)
+        {
+            debugEvent("keymap_open_fail", err);
+            continue;
+        }
         if(init) 
         {
             lfs_file_rewind(lfsHandle, &keymap);                                         //刷新一个文件
-            lfs_file_write(lfsHandle, &keymap, keymapList[i], 2*80);           //写入文件
+            lfs_ssize_t len = lfs_file_write(lfsHandle, &keymap, keymapList[i], 2*80);           //写入文件
+            if(len != 2*80) debugEvent("keymap_write_fail", (int)len);
         }
-        else lfs_file_read(lfsHandle, &keymap, keymapList[i], 2*80);           //读文件
+        else
+        {
+            lfs_ssize_t len = lfs_file_read(lfsHandle, &keymap, keymapList[i], 2*80);           //读文件
+            if(len != 2*80) debugEvent("keymap_read_fail", (int)len);
+        }
         lfs_file_close(lfsHandle, &keymap); 
     }
     return 0;
@@ -229,11 +261,18 @@ unsigned char keymapSave(unsigned char layer)
 
     char temp[30] = {'\0'};
     sprintf(temp,"keymapLayer%d",layer);
-    lfs_file_open(lfsHandle, &keymap, temp, LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
+    debugStage(0, 22);
+    int err = lfs_file_open(lfsHandle, &keymap, temp, LFS_O_RDWR | LFS_O_CREAT);  //打开文件，没有就创建
+    if(err < 0)
+    {
+        debugEvent("keymap_open_fail", err);
+        return 1;
+    }
 
     
     lfs_file_rewind(lfsHandle, &keymap);                                         //刷新一个文件
-    lfs_file_write(lfsHandle, &keymap, keymapList[layer], 2*80);           //写入文件
+    lfs_ssize_t len = lfs_file_write(lfsHandle, &keymap, keymapList[layer], 2*80);           //写入文件
+    if(len != 2*80) debugEvent("keymap_write_fail", (int)len);
     
     lfs_file_close(lfsHandle, &keymap); 
     

@@ -27,10 +27,18 @@ void magic63UI(void)
     magic63UILayerPageinit(tabview);
     magic63UILinghtPageinit(tabview);
     magic63UIRatePageinit(tabview);
+    magic63UICodexPageinit(tabview);
+    magic63UIMacroRecordPageinit(tabview);
+    magic63UIMacroPlayPageinit(tabview);
+    magic63UIBounceDiagPageinit(tabview);
     magic63UIAPMPageinit(tabview);
-    magic63UIGifPageinit(tabview);
+    /* Temporarily disable the standalone GIF playback page. */
+    // magic63UIGifPageinit(tabview);
     magic63UIGongDePageinit(tabview);
     magic63UIBootPageinit(tabview);
+
+    lv_tabview_set_act(tabview, 0, LV_ANIM_OFF);
+    pageResetToFirst();
 }
 
 

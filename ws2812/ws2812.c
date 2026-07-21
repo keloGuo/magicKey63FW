@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
@@ -24,17 +25,27 @@
 #endif
 
 void userPrintf(const char* format, ...);
+void debugEventText(const char *tag, const char *text, int value);
 
 unsigned short *getDataBuff(void);
 
-static int Dma2812Chan = 0;
+static int Dma2812Chan = -1;
+static unsigned char ws2812DmaClaimed = 0;
+static unsigned char ws2812PioLoaded = 0;
+static uint ws2812Offset = 0;
 
 static unsigned int PixelData[64] __attribute__((aligned(256))) = {0};
 unsigned int PixelDataP = 0;
 
 unsigned char ws2812DMAinit(void)
 {
-    Dma2812Chan = dma_claim_unused_channel(true);      
+    if(!ws2812DmaClaimed)
+    {
+        Dma2812Chan = dma_claim_unused_channel(true);
+        ws2812DmaClaimed = 1;
+    }
+
+    dma_channel_abort(Dma2812Chan);
     dma_channel_config   c = dma_channel_get_default_config(Dma2812Chan);                  //
     channel_config_set_read_increment(&c, true);                                           //
     channel_config_set_write_increment(&c, false);                                         //
@@ -46,6 +57,29 @@ unsigned char ws2812DMAinit(void)
     dma_channel_configure(Dma2812Chan, &c,&pio1->txf[2],PixelData,64,false);               //
 
     return 0;
+}
+
+static void ws2812PioStart(void)
+{
+    PIO pio = pio1;
+    int sm = 2;
+    if(!ws2812PioLoaded)
+    {
+        ws2812Offset = pio_add_program(pio, &ws2812_program);
+        ws2812PioLoaded = 1;
+    }
+    pio_sm_set_enabled(pio, sm, false);
+    pio_sm_clear_fifos(pio, sm);
+    pio_sm_restart(pio, sm);
+    ws2812_program_init(pio, sm, ws2812Offset, WS2812_PIN, 800000, IS_RGBW);
+}
+
+void ws2812RestoreHardware(void)
+{
+    debugEventText("ws2812", "restore", 0);
+    PixelDataP = 0;
+    ws2812PioStart();
+    ws2812DMAinit();
 }
 
 static inline void put_pixel(uint32_t pixel_grb) {
@@ -141,6 +175,7 @@ const struct {
 
 struct repeating_timer ws2812PixeUpade;
 struct repeating_timer lightTimer;
+struct repeating_timer codexRestoreTimer;
 
 typedef enum {
     CODEX_STATUS_IDLE = 0,
@@ -152,9 +187,17 @@ typedef enum {
 
 static volatile unsigned char codexStatusActive = 0;
 static volatile codex_status_t codexStatus = CODEX_STATUS_IDLE;
+static volatile unsigned char codexRestorePending = 0;
+static volatile unsigned char macroRecordActive = 0;
+static volatile unsigned char macroPlayActive = 0;
+static unsigned char macroRecordLedState[NUM_PIXELS] = {0};
+static unsigned char macroPlayLedIndex = NUM_PIXELS;
+static unsigned char macroPlayLedState = 0;
 static unsigned int codexStatusTick = 0;
 static uint32_t codexWorkingColors[4] = {0};
 static unsigned int codexWorkingColorStep = 0xffffffff;
+
+static bool ws2812CodexRestoreTimerHandle(repeating_timer_t *rt);
 
 bool ws2812PixeUpadeTimerHandle (repeating_timer_t *rt)
 {
@@ -250,7 +293,17 @@ bool ws2812PixeUpadeTimerHandle2 (repeating_timer_t *rt)
 
 unsigned char ws2812Trigger(unsigned char mode,unsigned int frameNumber,unsigned char keyNumber)
 {
-    codexStatusActive = 0;
+    if (macroRecordActive || macroPlayActive) return 0;
+    if (codexStatusActive || codexRestorePending)
+    {
+        codexStatusActive = 0;
+        if (codexStatus != CODEX_STATUS_IDLE)
+        {
+            codexRestorePending = 1;
+            cancel_repeating_timer(&codexRestoreTimer);
+            add_repeating_timer_ms(5000,ws2812CodexRestoreTimerHandle,0,&codexRestoreTimer);
+        }
+    }
     pat = mode%count_of(pattern_table);
     franeCount = frameNumber;
     dir = (rand() >> 30) & 1 ? 1 : -1;
@@ -258,6 +311,96 @@ unsigned char ws2812Trigger(unsigned char mode,unsigned int frameNumber,unsigned
     cancel_repeating_timer(&ws2812PixeUpade);
     add_repeating_timer_ms(10,ws2812PixeUpadeTimerHandle2,0,&ws2812PixeUpade);
     return 0;
+}
+
+static void ws2812MacroRecordRender(void)
+{
+    for (int i = 0; i < NUM_PIXELS; ++i)
+    {
+        if(macroRecordLedState[i] == 1) put_pixel(urgb_u32(96, 0, 0));
+        else if(macroRecordLedState[i] == 2) put_pixel(urgb_u32(0, 64, 0));
+        else put_pixel(0);
+    }
+}
+
+bool ws2812MacroRecordTimerHandle(repeating_timer_t *rt)
+{
+    if (!macroRecordActive) return false;
+    ws2812MacroRecordRender();
+    return true;
+}
+
+void ws2812MacroRecordStart(void)
+{
+    macroRecordActive = 1;
+    codexStatusActive = 0;
+    codexRestorePending = 0;
+    memset(macroRecordLedState, 0, sizeof(macroRecordLedState));
+    cancel_repeating_timer(&codexRestoreTimer);
+    cancel_repeating_timer(&ws2812PixeUpade);
+    PixelDataP = 0;
+    ws2812MacroRecordRender();
+    add_repeating_timer_ms(50,ws2812MacroRecordTimerHandle,0,&ws2812PixeUpade);
+}
+
+void ws2812MacroRecordStop(void)
+{
+    if(!macroRecordActive) return;
+    macroRecordActive = 0;
+    memset(macroRecordLedState, 0, sizeof(macroRecordLedState));
+    cancel_repeating_timer(&ws2812PixeUpade);
+    PixelDataP = 0;
+    ws2812Clean(NUM_PIXELS, 0);
+}
+
+void ws2812MacroRecordKey(unsigned char ledIndex, unsigned char pressed)
+{
+    if(!macroRecordActive) return;
+    if(ledIndex >= NUM_PIXELS) return;
+    macroRecordLedState[ledIndex] = pressed ? 1 : 2;
+}
+
+static void ws2812MacroPlayRender(void)
+{
+    for (int i = 0; i < NUM_PIXELS; ++i)
+    {
+        if(i == macroPlayLedIndex && macroPlayLedState == 1) put_pixel(urgb_u32(96, 0, 0));
+        else if(i == macroPlayLedIndex && macroPlayLedState == 2) put_pixel(urgb_u32(0, 64, 0));
+        else put_pixel(0);
+    }
+}
+
+void ws2812MacroPlayStart(void)
+{
+    macroPlayActive = 1;
+    codexStatusActive = 0;
+    codexRestorePending = 0;
+    macroPlayLedIndex = NUM_PIXELS;
+    macroPlayLedState = 0;
+    cancel_repeating_timer(&codexRestoreTimer);
+    cancel_repeating_timer(&ws2812PixeUpade);
+    PixelDataP = 0;
+    ws2812MacroPlayRender();
+}
+
+void ws2812MacroPlayStop(void)
+{
+    if(!macroPlayActive) return;
+    macroPlayActive = 0;
+    macroPlayLedIndex = NUM_PIXELS;
+    macroPlayLedState = 0;
+    cancel_repeating_timer(&ws2812PixeUpade);
+    PixelDataP = 0;
+    ws2812Clean(NUM_PIXELS, 0);
+}
+
+void ws2812MacroPlayKey(unsigned char ledIndex, unsigned char pressed)
+{
+    if(!macroPlayActive) return;
+    macroPlayLedIndex = ledIndex;
+    macroPlayLedState = (ledIndex < NUM_PIXELS) ? (pressed ? 1 : 2) : 0;
+    PixelDataP = 0;
+    ws2812MacroPlayRender();
 }
 
 static void ws2812CodexFill(uint32_t color)
@@ -383,10 +526,8 @@ bool ws2812CodexTimerHandle(repeating_timer_t *rt)
     return true;
 }
 
-unsigned char ws2812CodexStatus(unsigned char status)
+static void ws2812CodexStart(void)
 {
-    if (status > CODEX_STATUS_WAITING) status = CODEX_STATUS_IDLE;
-    codexStatus = (codex_status_t)status;
     codexStatusActive = 1;
     codexStatusTick = 0;
     PixelDataP = 0;
@@ -397,6 +538,25 @@ unsigned char ws2812CodexStatus(unsigned char status)
     }
     cancel_repeating_timer(&ws2812PixeUpade);
     add_repeating_timer_ms(80,ws2812CodexTimerHandle,0,&ws2812PixeUpade);
+}
+
+static bool ws2812CodexRestoreTimerHandle(repeating_timer_t *rt)
+{
+    codexRestorePending = 0;
+    if (codexStatus != CODEX_STATUS_IDLE)
+    {
+        ws2812CodexStart();
+    }
+    return false;
+}
+
+unsigned char ws2812CodexStatus(unsigned char status)
+{
+    if (status > CODEX_STATUS_WAITING) status = CODEX_STATUS_IDLE;
+    codexRestorePending = 0;
+    cancel_repeating_timer(&codexRestoreTimer);
+    codexStatus = (codex_status_t)status;
+    ws2812CodexStart();
     return 0;
 }
 
@@ -407,11 +567,7 @@ unsigned char ws2812GetCodexStatus(void)
 
 unsigned char ws2812Init(void)
 {
-    PIO pio = pio1;
-    int sm = 2;
-    uint offset = pio_add_program(pio, &ws2812_program);
-    ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, IS_RGBW);
-    ws2812DMAinit();
+    ws2812RestoreHardware();
     add_repeating_timer_ms(5,lightTimerHandel,0,&lightTimer);
     //add_repeating_timer_ms(10,ws2812PixeUpadeTimerHandle,0,&ws2812PixeUpade);              
     return 0;

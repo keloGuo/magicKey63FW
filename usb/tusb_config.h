@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../magic63_config.h"
+
 // Windows only supports RNDIS, and apparently doesn't like composite devices with two configurations.
 // Mac only supports CDC-ECM, which we present as the second config in a dual configuration device
 
@@ -7,7 +9,7 @@
 
 #define CFG_TUD_HID               4
 #define CFG_TUD_ECM_RNDIS         1
-#define CFG_TUD_CDC               1
+#define CFG_TUD_CDC               MAGIC63_ENABLE_USB_CDC_DEBUG
 #define CFG_TUD_MSC               0    // This enables mass storage
 #define CFG_TUD_MSC_EP_BUFSIZE    512   // Also Add msc_disk.c and descritors
 #define CFG_TUD_NCM               0

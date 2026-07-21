@@ -18,6 +18,8 @@
         <div>
           <input type="button" id="showKeyboardPage" class="topButton topButtonActive" value="键盘" />
           <input type="button" id="showMacroPage" class="topButton" value="宏" />
+          <input type="button" id="showBounceDiagPage" class="topButton" value="轴抖动" />
+          <input type="button" id="showUploadPage" value="上传页" style="height: 30px; padding-left: 16px; padding-right: 16px;" />
           <input type="button" id="deviceReboot" value="重启设备" style="height: 30px; padding-left: 16px; padding-right: 16px;" />
         </div>
       </div>
@@ -115,12 +117,10 @@
           <div class="keyA" id="keyId64" >→</div>
         </div>
       </div>    
-      <div id="keyboardA"  style="width:200px;height: 39px;margin-top: 0px; border: radius 2px;">
-        <div style="clear: both;height: 4px;"></div>
-        <div style="width: 8px;height: 32px;float: left;"></div>
-        <div class="keyB" style="Line-height:12px;" id="keyId71" name="v-">编码器左</div>
-        <div class="keyB" style="Line-height:12px;" id="keyId79" name="v0"  style="width:60px;">编码器按下</div>
-        <div class="keyB" style="Line-height:12px;" id="keyId70" name="v+">编码器右</div>
+      <div class="encoderKeyboard">
+        <div class="keyB encoderKey" id="keyId71" name="v-">编码器左</div>
+        <div class="keyB encoderKey encoderPressKey" id="keyId79" name="v0">编码器按下</div>
+        <div class="keyB encoderKey" id="keyId70" name="v+">编码器右</div>
       </div>
 
       <div id="sharedKeyboardHome">
@@ -147,8 +147,23 @@
         <div class="keyB" id="IDS4" name="MRight">滚轮下</div>
       </div>
   
-      <div id="keyboardA"  style="width:888px;height: 250px;margin-top: 20px;">
+      <div id="keyboardA"  style="width:888px;height: 290px;margin-top: 20px;">
         <div style="float: left;">
+            <div style="clear: both;height: 8px;"></div>
+            <div style="width: 70px;height: 32px;float: left;"></div>
+            <div class="keyA" id="ID0x68" name="F13">F13</div>
+            <div class="keyA" id="ID0x69" name="F14">F14</div>
+            <div class="keyA" id="ID0x6A" name="F15">F15</div>
+            <div class="keyA" id="ID0x6B" name="F16">F16</div>
+            <div class="keyA" id="ID0x6C" name="F17">F17</div>
+            <div class="keyA" id="ID0x6D" name="F18">F18</div>
+            <div class="keyA" id="ID0x6E" name="F19">F19</div>
+            <div class="keyA" id="ID0x6F" name="F20">F20</div>
+            <div class="keyA" id="ID0x70" name="F21">F21</div>
+            <div class="keyA" id="ID0x71" name="F22">F22</div>
+            <div class="keyA" id="ID0x72" name="F23">F23</div>
+            <div class="keyA" id="ID0x73" name="F24">F24</div>
+
             <div style="clear: both;height: 8px;"></div>
             <div style="width: 10px;height: 32px;float: left;"></div>
   
@@ -292,7 +307,7 @@
             <div class="keyA" id="ID0x62" name="Numpad0" style="width: 64px;">0<br />Ins</div>
             <div class="keyA" id="ID0x63" name="NumpadDecimal">.<br />Del</div>
           </div>
-          <div style="float: left;">
+          <div style="float: left;margin-top: 40px;">
             <div style="clear: both;height: 8px;"></div>
             <div class="keyA" id="IDL4" name="4">FN<br />4</div>
             <div style="clear: both;height: 8px;"></div>
@@ -350,6 +365,85 @@
           <div id="macroActionList"></div>
           <div class="macroSectionTitle">按键选择</div>
           <div id="macroKeyboardHost"></div>
+        </div>
+      </div>
+      <div id="bounceDiagPage" style="display: none;">
+        <div class="bouncePanel">
+          <div class="macroHeader">
+            <div>
+              <div class="macroTitle">机械轴抖动检测</div>
+              <div class="macroMeta">
+                <span id="bounceDiagState">等待开始</span>
+                <span id="bounceDiagTarget">未选择按键</span>
+              </div>
+            </div>
+            <div class="macroToolbar">
+              <input type="button" id="bounceDiagStart" class="macroButton macroButtonSave" value="重新检测" />
+              <input type="button" id="bounceDiagCancel" class="macroButton macroButtonDanger" value="取消检测" />
+            </div>
+          </div>
+          <div class="bounceSteps">
+            <div id="bounceStepIdle" class="bounceStep bounceStepActive">
+              <div class="bounceStepNo">步骤 1</div>
+              <div class="bounceStepTitle">按任意键开始检测</div>
+              <div class="bounceStepText">进入页面后设备会暂停键盘上报，第一次按下的按键就是本次检测目标。</div>
+            </div>
+            <div id="bounceStepSelect" class="bounceStep">
+              <div class="bounceStepNo">步骤 2</div>
+              <div class="bounceStepTitle">等待目标按键</div>
+              <div class="bounceStepText">按下任意机械轴，页面会将这个按键作为本次检测目标。</div>
+            </div>
+            <div id="bounceStepRelease" class="bounceStep">
+              <div class="bounceStepNo">步骤 3</div>
+              <div class="bounceStepTitle">松开按键并等待稳定</div>
+              <div class="bounceStepText">设备会等待所有列信号释放并稳定 300ms，然后才开始正式采集。</div>
+            </div>
+            <div id="bounceStepPress" class="bounceStep">
+              <div class="bounceStepNo">步骤 4</div>
+              <div class="bounceStepTitle">正式按下测试</div>
+              <div class="bounceStepText">再次按下同一个按键并保持到页面提示松开，PIO 会记录按下过程中的跳变次数和间隔。</div>
+            </div>
+            <div id="bounceStepDone" class="bounceStep">
+              <div class="bounceStepNo">步骤 5</div>
+              <div class="bounceStepTitle">松开并查看结果</div>
+              <div class="bounceStepText">页面提示松开后正常松开按键，完成后会显示按下和松开两段抖动数据。</div>
+            </div>
+          </div>
+          <div class="bounceResult">
+            <div class="bounceMetric"><span>当前状态</span><strong id="bounceMetricState">等待开始</strong></div>
+            <div class="bounceMetric"><span>目标按键</span><strong id="bounceMetricKey">--</strong></div>
+            <div class="bounceMetric"><span>按下跳变</span><strong id="bounceMetricEdges">--</strong></div>
+            <div class="bounceMetric"><span>松开跳变</span><strong id="bounceMetricReleaseEdges">--</strong></div>
+            <div class="bounceMetric"><span>按下到稳定</span><strong id="bounceMetricPressTotal">--</strong></div>
+            <div class="bounceMetric"><span>松开到稳定</span><strong id="bounceMetricReleaseTotal">--</strong></div>
+          </div>
+          <div class="macroSectionTitle" id="bounceIntervalTitle">按下跳变间隔</div>
+          <div id="bounceIntervalList" class="bounceIntervals">等待测试结果</div>
+          <div class="macroSectionTitle" id="bounceReleaseIntervalTitle">松开跳变间隔</div>
+          <div id="bounceReleaseIntervalList" class="bounceIntervals">等待测试结果</div>
+          <div class="macroSectionTitle">本页历史记录</div>
+          <div id="bounceHistoryList" class="bounceHistoryList">暂无历史记录</div>
+        </div>
+      </div>
+      <div id="gifUploadPage" style="display: none;">
+        <div class="uploadPanel">
+          <div class="macroHeader">
+            <div>
+              <div class="macroTitle">GIF 上传</div>
+              <div class="macroMeta">
+                <span id="gifUploadInfo">160x80，最大 512K</span>
+                <span id="gifUploadState">等待选择文件</span>
+              </div>
+            </div>
+            <div class="macroToolbar">
+              <input type="button" id="gifUploadStart" class="macroButton macroButtonSave" value="上传 GIF" />
+              <input type="button" id="gifUploadCancel" class="macroButton macroButtonDanger" value="取消" />
+            </div>
+          </div>
+          <div class="uploadBox">
+            <input type="file" id="gifUploadFile" accept=".gif" />
+            <progress id="gifUploadProgress" value="0" max="100"></progress>
+          </div>
         </div>
       </div>
     </body>    

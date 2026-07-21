@@ -11,10 +11,10 @@ int goTOBootMode(int t,int inOrOut,int k)
     //(void) t;
     // void (*bootMode)() = ((void (*)())0x000000004);
     // bootMode();
-    if(t!=2) return 1;
+    if(t!=2) return 0;
     reset_usb_boot(0, 0);
     printf("goTOBootMode \r\n");
-    return 0;
+    return 1;
 }
 
 pageInfo* magic63BootPageShow(lv_obj_t* temp)

@@ -1,2 +1,204 @@
-<!DOCTYPE html><html><script type="module">const chunkSize=1024;function fileLoad(start){var fileObj=document.getElementById('file').files[0];if(start>=fileObj.size){return null}var end=(start+chunkSize>fileObj.size)?fileObj.size:(start+chunkSize);let fd=new FormData();fd.append('file',fileObj.slice(start,end));return fd}var uploadStatie=0;var uploadCheckSum=0;var uploadDataLen=0;var uploadDataOffset=0;var uploadCheckSumState=0;var uploadCount=0;var uploadBusy=0;var uploadErro=0;var timeOutCount=0;var timer=0;function checkSumProcess(start){var fileObj=document.getElementById('file').files[0];if(start>=fileObj.size){return null}var end=(start+chunkSize>fileObj.size)?fileObj.size:(start+chunkSize);uploadDataOffset=start;uploadDataLen=end-start;let reader=new FileReader();reader.readAsArrayBuffer(fileObj);uploadCheckSum=0;uploadCheckSumState=0;reader.onload=function(){const dataView=new DataView(reader.result);for(var i=start;i<end;i++){uploadCheckSum+=dataView.getUint8(i)}console.log("uploadCheckSum ",uploadCheckSum);uploadCheckSumState=1};reader.onerror=function(){console.log(reader.error)}}function webDataHandle(v){var temp=""+v.currentTarget.responseText+"";if(v.currentTarget.responseText=="")return;var obj=JSON.parse(temp);if(obj.success=="fail"){uploadErro=1;uploadStatie=3;return 0}uploadBusy=0}function webDataRequest(api,data){var xmlHttp=new XMLHttpRequest;var URL='http://192.168.3.1:80/api/'+api;xmlHttp.open('POST',URL);xmlHttp.setRequestHeader('content-type','application/json');xmlHttp.send(data);xmlHttp.onreadystatechange=webDataHandle}function uploadFileTimerHandle(){if(uploadBusy){timeOutCount++;if(timeOutCount>10){console.log("上传失败");clearInterval(timer)}return}timeOutCount=0;if(uploadStatie==1){if(uploadCheckSumState==0)return;console.log("updata file send command  ",uploadCount,uploadCheckSum);var temp='{"offset":0,"cleckSum":0,"len":0,"over":0}';var obj=JSON.parse(temp);obj.offset=uploadDataOffset;obj.cleckSum=uploadCheckSum;obj.len=uploadDataLen;if(uploadDataLen+uploadDataOffset>=document.getElementById('file').files[0].size)obj.over=1;temp=JSON.stringify(obj);webDataRequest("webFileUpdatePpakgEnter",temp);uploadStatie=2;uploadBusy=1;uploadCount+=1;progressFunction(uploadCount)}else if(uploadStatie==2){var temp=fileLoad(uploadCount*chunkSize);uploadCheckSumState=0;checkSumProcess(uploadCount*chunkSize);if(temp==null){clearInterval(timer);var time=document.getElementById("time");time.innerHTML="上传完成";return}webDataRequest("updateP",temp);uploadStatie=1;console.log("updata file send data  ",uploadCount)}else if(uploadStatie==0){uploadCount=0;var fileObj=document.getElementById('file').files[0];var temp='{"size":0,"type":0}';var obj=JSON.parse(temp);obj.size=fileObj.size;var fileName=fileObj.name;console.log("fileName",fileName.length,fileName);if(fileName.length>5){var temp=fileName.slice(fileName.length-5,fileName.length);var temp1=fileName.slice(fileName.length-4,fileName.length);console.log("fileName",fileName,temp,temp1);if(temp==".html")obj.type=1;if(temp1==".gif")obj.type=2}if(obj.type==0){uploadStatie=0;uploadCheckSum=0;uploadCount=0;uploadBusy=0;uploadErro=0;timeOutCount=0;uploadStatie=0;var time=document.getElementById("time");time.innerHTML="文件类型错误";return}temp=JSON.stringify(obj);var progressBar=document.getElementById("progressBar");progressBar.max=((fileObj.size%chunkSize==0)?fileObj.size/chunkSize:fileObj.size/chunkSize+1)-1;webDataRequest("updateStart",temp);uploadStatie=2;uploadBusy=1;timer=self.setInterval(uploadFileTimerHandle,100);var time=document.getElementById("time");time.innerHTML="文件上传中 . . . ";console.log("updata file start ")}else if(uploadStatie==3){uploadStatie=0;uploadCheckSum=0;uploadCount=0;uploadBusy=0;uploadErro=0;timeOutCount=0;uploadStatie=0;clearInterval(timer)}}function UpladFile(){uploadStatie=0;uploadFileTimerHandle()}function cancleUploadFile(){uploadStatie=3}function progressFunction(count){var progressBar=document.getElementById("progressBar");var percentageDiv=document.getElementById("percentage");progressBar.value=count}window.onload=function(){console.log("onload");document.querySelector("#update").addEventListener('click',UpladFile);document.querySelector("#cancle").addEventListener('click',cancleUploadFile)}</script>
-<head><meta charset="UTF-8"><title>页面文件上传</title></head><body><div style="width: 300px; margin-right: auto;margin-left: auto;  margin-top: 300px;"><progress id="progressBar"value="0"max="100"style="width: 300px;"></progress><span id="percentage"></span><span id="time"></span><br/><br/><input type="file"id="file"name="myfile"/><br/><br/><input type="button"style="margin-left:opx; margin-right: 20px;"id="update"value="上传"/><input type="button"id="cancle"value="取消"/></div></body></html>
+<!DOCTYPE html>
+<html>
+<script type="module">
+const chunkSize = 1024;
+var uploadFileInputId = "htmlFile";
+var uploadExpectedType = 1;
+
+function resetUploadState() {
+  uploadStatie = 0;
+  uploadCheckSum = 0;
+  uploadCount = 0;
+  uploadBusy = 0;
+  uploadErro = 0;
+  timeOutCount = 0;
+}
+
+function showMessage(text) {
+  var time = document.getElementById("time");
+  if(time != null) time.innerHTML = text;
+}
+
+function fileLoad(start) {
+  var fileObj = getUploadFile();
+  if(start >= fileObj.size) return null;
+  var end = (start + chunkSize > fileObj.size) ? fileObj.size : (start + chunkSize);
+  let fd = new FormData();
+  fd.append('file', fileObj.slice(start, end));
+  return fd;
+}
+
+var uploadStatie = 0;
+var uploadCheckSum = 0;
+var uploadDataLen = 0;
+var uploadDataOffset = 0;
+var uploadCheckSumState = 0;
+var uploadCount = 0;
+var uploadBusy = 0;
+var uploadErro = 0;
+var timeOutCount = 0;
+var timer = 0;
+
+function checkSumProcess(start) {
+  var fileObj = getUploadFile();
+  if(start >= fileObj.size) return null;
+  var end = (start + chunkSize > fileObj.size) ? fileObj.size : (start + chunkSize);
+  uploadDataOffset = start;
+  uploadDataLen = end - start;
+  let reader = new FileReader();
+  reader.readAsArrayBuffer(fileObj);
+  uploadCheckSum = 0;
+  uploadCheckSumState = 0;
+  reader.onload = function() {
+    const dataView = new DataView(reader.result);
+    for(var i = start; i < end; i++) uploadCheckSum += dataView.getUint8(i);
+    console.log("uploadCheckSum ", uploadCheckSum);
+    uploadCheckSumState = 1;
+  };
+  reader.onerror = function() {
+    console.log(reader.error);
+  };
+}
+
+function webDataHandle(v) {
+  var temp = "" + v.currentTarget.responseText + "";
+  if(v.currentTarget.responseText == "") return;
+  var obj = JSON.parse(temp);
+  if(obj.success == "fail") {
+    uploadErro = 1;
+    uploadStatie = 3;
+    showMessage("上传失败");
+    return 0;
+  }
+  uploadBusy = 0;
+}
+
+function webDataRequest(api, data) {
+  var xmlHttp = new XMLHttpRequest;
+  var URL = 'http://192.168.3.1:80/api/' + api;
+  xmlHttp.open('POST', URL);
+  xmlHttp.setRequestHeader('content-type', 'application/json');
+  xmlHttp.send(data);
+  xmlHttp.onreadystatechange = webDataHandle;
+}
+
+function uploadFileTimerHandle() {
+  if(uploadBusy) {
+    timeOutCount++;
+    if(timeOutCount > 10) {
+      console.log("上传失败");
+      clearInterval(timer);
+      showMessage("上传失败");
+    }
+    return;
+  }
+  timeOutCount = 0;
+  if(uploadStatie == 1) {
+    if(uploadCheckSumState == 0) return;
+    console.log("updata file send command  ", uploadCount, uploadCheckSum);
+    var temp = '{"offset":0,"cleckSum":0,"len":0,"over":0}';
+    var obj = JSON.parse(temp);
+    obj.offset = uploadDataOffset;
+    obj.cleckSum = uploadCheckSum;
+    obj.len = uploadDataLen;
+    if(uploadDataLen + uploadDataOffset >= getUploadFile().size) obj.over = 1;
+    temp = JSON.stringify(obj);
+    webDataRequest("webFileUpdatePpakgEnter", temp);
+    uploadStatie = 2;
+    uploadBusy = 1;
+    uploadCount += 1;
+    progressFunction(uploadCount);
+  } else if(uploadStatie == 2) {
+    var temp = fileLoad(uploadCount * chunkSize);
+    uploadCheckSumState = 0;
+    checkSumProcess(uploadCount * chunkSize);
+    if(temp == null) {
+      clearInterval(timer);
+      showMessage("上传完成");
+      return;
+    }
+    webDataRequest("updateP", temp);
+    uploadStatie = 1;
+    console.log("updata file send data  ", uploadCount);
+  } else if(uploadStatie == 0) {
+    uploadCount = 0;
+    var fileObj = getUploadFile();
+    if(fileObj == null) {
+      showMessage("请选择文件");
+      return;
+    }
+    var temp = '{"size":0,"type":0}';
+    var obj = JSON.parse(temp);
+    obj.size = fileObj.size;
+    var fileName = fileObj.name;
+    console.log("fileName", fileName.length, fileName);
+    if(fileName.length > 5) {
+      var temp5 = fileName.slice(fileName.length - 5, fileName.length);
+      console.log("fileName", fileName, temp5);
+      if(temp5 == ".html") obj.type = 1;
+    }
+    if(obj.type == 0 || obj.type != uploadExpectedType) {
+      resetUploadState();
+      showMessage("文件类型错误");
+      return;
+    }
+    temp = JSON.stringify(obj);
+    var progressBar = document.getElementById("progressBar");
+    progressBar.max = ((fileObj.size % chunkSize == 0) ? fileObj.size / chunkSize : fileObj.size / chunkSize + 1) - 1;
+    webDataRequest("updateStart", temp);
+    uploadStatie = 2;
+    uploadBusy = 1;
+    timer = self.setInterval(uploadFileTimerHandle, 100);
+    showMessage("文件上传中 . . . ");
+    console.log("updata file start ");
+  } else if(uploadStatie == 3) {
+    resetUploadState();
+    clearInterval(timer);
+  }
+}
+
+function getUploadFile() {
+  var input = document.getElementById(uploadFileInputId);
+  if(input == null) return null;
+  return input.files[0];
+}
+
+function UpladFile(type) {
+  uploadExpectedType = 1;
+  uploadFileInputId = "htmlFile";
+  var fileObj = getUploadFile();
+  if(fileObj == null) {
+    showMessage("请选择文件");
+    return;
+  }
+  if(fileObj.name.slice(fileObj.name.length - 5, fileObj.name.length) != ".html") {
+    resetUploadState();
+    showMessage("请选择HTML文件");
+    return;
+  }
+  uploadStatie = 0;
+  uploadFileTimerHandle();
+}
+
+function cancleUploadFile() {
+  uploadStatie = 3;
+}
+
+function progressFunction(count) {
+  var progressBar = document.getElementById("progressBar");
+  var percentageDiv = document.getElementById("percentage");
+  progressBar.value = count;
+}
+
+window.onload = function() {
+  console.log("onload");
+  document.querySelector("#updateHtml").addEventListener('click', function() { UpladFile(1); });
+  document.querySelector("#cancle").addEventListener('click', cancleUploadFile);
+};
+</script>
+<head><meta charset="UTF-8"><title>页面文件上传</title></head>
+<body><div style="width: 300px; margin-right: auto;margin-left: auto; margin-top: 300px;">
+<progress id="progressBar" value="0" max="100" style="width: 300px;"></progress><span id="percentage"></span><span id="time"></span><br/><br/>
+<div>网页文件</div><input type="file" id="htmlFile" name="htmlFile" accept=".html"/><br/><input type="button" style="margin-top: 8px;" id="updateHtml" value="上传网页"/><br/><br/>
+<input type="button" id="cancle" value="取消"/>
+</div></body></html>

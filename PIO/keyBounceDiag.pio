@@ -1,0 +1,124 @@
+; Mechanical switch bounce diagnostic programs.
+;
+; key_bounce_diag_press_active_high:
+;   Starts from released level 0, waits for press level 1, records every
+;   transition until the signal remains pressed for the CPU-provided stable
+;   target. Then raises IRQ 0 and parks.
+;
+; key_bounce_diag_release_active_high:
+;   Starts from pressed level 1, waits for release level 0, records every
+;   transition until the signal remains released for the CPU-provided stable
+;   target. Then raises IRQ 0 and parks.
+
+.program key_bounce_diag_press_active_high
+
+.wrap_target
+    pull block
+    mov y, osr
+    mov x, ~null
+
+wait_released:
+    wait 0 pin 0
+
+wait_first_press:
+    wait 1 pin 0
+
+press_edge:
+    mov isr, x
+    push block
+    mov x, ~null
+
+pressed_loop:
+    jmp pin pressed_still
+    jmp release_edge
+
+pressed_still:
+    jmp x!=y pressed_count
+    irq 0
+    jmp done
+
+pressed_count:
+    jmp x-- pressed_loop
+
+release_edge:
+    mov isr, x
+    push block
+    mov x, ~null
+
+released_loop:
+    jmp pin press_edge
+    jmp x-- released_loop
+
+done:
+    jmp done
+.wrap
+
+.program key_bounce_diag_release_active_high
+
+.wrap_target
+    pull block
+    mov y, osr
+    mov x, ~null
+
+wait_first_release:
+    wait 0 pin 0
+
+release_edge:
+    mov isr, x
+    push block
+    mov x, ~null
+
+released_loop:
+    jmp pin press_edge
+    jmp x!=y released_count
+    irq 0
+    jmp done
+
+released_count:
+    jmp x-- released_loop
+
+press_edge:
+    mov isr, x
+    push block
+    mov x, ~null
+
+pressed_loop:
+    jmp pin pressed_count
+    jmp release_edge
+
+pressed_count:
+    jmp x-- pressed_loop
+
+done:
+    jmp done
+.wrap
+
+% c-sdk {
+#include "pico/stdlib.h"
+
+static inline void key_bounce_diag_press_active_high_program_init(PIO pio, uint sm, uint offset, uint pin, float clkdiv) {
+    pio_gpio_init(pio, pin);
+    gpio_set_dir(pin, GPIO_IN);
+
+    pio_sm_config c = key_bounce_diag_press_active_high_program_get_default_config(offset);
+    sm_config_set_jmp_pin(&c, pin);
+    sm_config_set_in_pins(&c, pin);
+    sm_config_set_clkdiv(&c, clkdiv);
+    sm_config_set_in_shift(&c, false, false, 32);
+    sm_config_set_out_shift(&c, false, false, 32);
+    pio_sm_init(pio, sm, offset, &c);
+}
+
+static inline void key_bounce_diag_release_active_high_program_init(PIO pio, uint sm, uint offset, uint pin, float clkdiv) {
+    pio_gpio_init(pio, pin);
+    gpio_set_dir(pin, GPIO_IN);
+
+    pio_sm_config c = key_bounce_diag_release_active_high_program_get_default_config(offset);
+    sm_config_set_jmp_pin(&c, pin);
+    sm_config_set_in_pins(&c, pin);
+    sm_config_set_clkdiv(&c, clkdiv);
+    sm_config_set_in_shift(&c, false, false, 32);
+    sm_config_set_out_shift(&c, false, false, 32);
+    pio_sm_init(pio, sm, offset, &c);
+}
+%}

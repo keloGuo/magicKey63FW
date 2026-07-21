@@ -13,6 +13,9 @@ unsigned char webRebootToUf2(struct mg_connection *c);
 unsigned char webReboot(struct mg_connection *c);
 unsigned char webCodexStatus(struct mg_http_message *hm,struct mg_connection *c);
 unsigned char webFsInfo(struct mg_connection *c);
+unsigned char webBounceDiagStart(struct mg_connection *c);
+unsigned char webBounceDiagCancel(struct mg_connection *c);
+unsigned char webBounceDiagStatus(struct mg_connection *c);
 unsigned char webGetMacro(struct mg_http_message *hm,struct mg_connection *c);
 unsigned char webSetMacro(struct mg_http_message *hm,struct mg_connection *c);
 unsigned char webListMacro(struct mg_connection *c);
@@ -68,6 +71,18 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 	{
 		webFsInfo(c);
 	}
+	else if (mg_http_match_uri(hm, "/api/bounceDiagStart"))
+	{
+		webBounceDiagStart(c);
+	}
+	else if (mg_http_match_uri(hm, "/api/bounceDiagCancel"))
+	{
+		webBounceDiagCancel(c);
+	}
+	else if (mg_http_match_uri(hm, "/api/bounceDiagStatus"))
+	{
+		webBounceDiagStatus(c);
+	}
 	else if (mg_http_match_uri(hm, "/api/getMacro"))
 	{
 		webGetMacro(hm,c);
@@ -83,6 +98,22 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 	else if (mg_http_match_uri(hm, "/api/deleteMacro"))
 	{
 		webDeleteMacro(hm,c);
+	}
+	else if (mg_http_match_uri(hm, "/update") || mg_http_match_uri(hm, "/update/"))
+	{
+		struct mg_http_serve_opts opts;
+		memset(&opts, 0, sizeof(opts));
+		opts.root_dir = "/web_root/update";
+		opts.fs = &mg_fs_packed;
+		mg_http_serve_file(c, hm, "/web_root/update/index.html", &opts);
+	}
+	else if (mg_http_match_uri(hm, "/update/#"))
+	{
+		struct mg_http_serve_opts opts;
+		memset(&opts, 0, sizeof(opts));
+		opts.root_dir = "/update=/web_root/update";
+		opts.fs = &mg_fs_packed;
+		mg_http_serve_dir(c, ev_data, &opts);
 	}
 	else 
 	{

@@ -7,6 +7,10 @@
 #include "mongoose.h"
 
 lfs_t *fsInit(void);
+void debugStage(unsigned char core, unsigned int stage);
+void debugHeapSample(void);
+void debugEvent(const char *tag, int value);
+void debugEventText(const char *tag, const char *text, int value);
 
 static const char *lfs_path(const char *path)
 {
@@ -48,10 +52,17 @@ static void lfs_mg_list(const char *path, void (*fn)(const char *, void *),
 static void *lfs_mg_open(const char *path, int flags)
 {
   int lfs_flags = (flags & MG_FS_WRITE) ? (LFS_O_RDWR | LFS_O_CREAT) : LFS_O_RDONLY;
+  debugStage(0, 22);
+  debugHeapSample();
   lfs_file_t *file = calloc(1, sizeof(*file));
 
-  if (file == NULL) return NULL;
-  if (lfs_file_open(fsInit(), file, lfs_path(path), lfs_flags) < 0) {
+  if (file == NULL) {
+    debugEvent("lfs_calloc_fail", 0);
+    return NULL;
+  }
+  int err = lfs_file_open(fsInit(), file, lfs_path(path), lfs_flags);
+  if (err < 0) {
+    debugEventText("lfs_open_fail", lfs_path(path), err);
     free(file);
     return NULL;
   }
@@ -67,19 +78,25 @@ static void lfs_mg_close(void *fd)
 
 static size_t lfs_mg_read(void *fd, void *buf, size_t len)
 {
+  debugStage(0, 22);
   lfs_ssize_t n = lfs_file_read(fsInit(), fd, buf, len);
+  if (n < 0) debugEvent("lfs_read_fail", (int)n);
   return n < 0 ? 0 : (size_t)n;
 }
 
 static size_t lfs_mg_write(void *fd, const void *buf, size_t len)
 {
+  debugStage(0, 22);
   lfs_ssize_t n = lfs_file_write(fsInit(), fd, buf, len);
+  if (n < 0) debugEvent("lfs_write_fail", (int)n);
   return n < 0 ? 0 : (size_t)n;
 }
 
 static size_t lfs_mg_seek(void *fd, size_t offset)
 {
+  debugStage(0, 22);
   lfs_soff_t pos = lfs_file_seek(fsInit(), fd, offset, LFS_SEEK_SET);
+  if (pos < 0) debugEvent("lfs_seek_fail", (int)pos);
   return pos < 0 ? 0 : (size_t)pos;
 }
 

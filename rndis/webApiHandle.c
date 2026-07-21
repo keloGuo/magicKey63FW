@@ -6,6 +6,7 @@
 #include "net.h"
 #include "cJSON.h"
 #include "lfs.h"
+#include "keyboardScan/keyboardScan.h"
 #include "pico/stdlib.h"
 #include "hardware/watchdog.h"
 
@@ -43,6 +44,11 @@ unsigned short *getKeyMap(unsigned char layer);
 unsigned char layerNumberSet(signed char layer);
 unsigned char webFileUpdatePpakgStart(struct mg_http_message *hm,struct mg_connection *c);
 lfs_t * fsInit(void);
+void debugStage(unsigned char core, unsigned int stage);
+void debugEvent(const char *tag, int value);
+void keyboardReportSetPaused(unsigned char paused);
+void magic63UIBounceDiagPageEnter(void);
+void magic63UIBounceDiagPageLeave(void);
 
 static void macroFileName(unsigned int id, char *out, size_t outLen)
 {
@@ -77,6 +83,7 @@ static int macroLoadOne(unsigned int id, macro_data_t *macro, unsigned char crea
     lfs_file_t file;
     lfs_t *fs = fsInit();
     macroFileName(id, name, sizeof(name));
+    debugStage(0, 22);
     int err = lfs_file_open(fs, &file, name, LFS_O_RDONLY);
     if(err < 0)
     {
@@ -86,6 +93,7 @@ static int macroLoadOne(unsigned int id, macro_data_t *macro, unsigned char crea
 
     lfs_ssize_t len = lfs_file_read(fs, &file, macro, sizeof(*macro));
     lfs_file_close(fs, &file);
+    if(len != sizeof(*macro)) debugEvent("web_macro_read_fail", (int)len);
     if(len != sizeof(*macro) ||
        macro->header.magic != MACRO_MAGIC ||
        macro->header.version != MACRO_VERSION ||
@@ -108,9 +116,16 @@ static int macroSaveOne(unsigned int id, macro_data_t *macro)
     macro->header.version = MACRO_VERSION;
     macro->header.id = id;
     if(macro->header.action_count > MACRO_MAX_ACTIONS) macro->header.action_count = MACRO_MAX_ACTIONS;
-    if(lfs_file_open(fs, &file, name, LFS_O_RDWR | LFS_O_CREAT | LFS_O_TRUNC) < 0) return -1;
+    debugStage(0, 22);
+    int err = lfs_file_open(fs, &file, name, LFS_O_RDWR | LFS_O_CREAT | LFS_O_TRUNC);
+    if(err < 0)
+    {
+        debugEvent("web_macro_open_fail", err);
+        return -1;
+    }
     lfs_ssize_t len = lfs_file_write(fs, &file, macro, sizeof(*macro));
     lfs_file_close(fs, &file);
+    if(len != sizeof(*macro)) debugEvent("web_macro_write_fail", (int)len);
     return len == sizeof(*macro) ? 0 : -1;
 }
 
@@ -248,6 +263,99 @@ unsigned char webFsInfo(struct mg_connection *c)
              usedBlocks);
     mg_http_reply(c, 200, s_json_header, body);
     return used >= 0 ? 1 : 0;
+}
+
+static unsigned char webBounceDiagRunning = 0;
+static unsigned int webBounceDiagLastHeartbeatMs = 0;
+#define WEB_BOUNCE_DIAG_HEARTBEAT_TIMEOUT_MS 3000u
+
+static void webBounceDiagStop(void)
+{
+    keyBounceDiagCancel();
+    magic63UIBounceDiagPageLeave();
+    keyboardReportSetPaused(0);
+    webBounceDiagRunning = 0;
+}
+
+unsigned char webBounceDiagStart(struct mg_connection *c)
+{
+    keyboardReportSetPaused(1);
+    keyBounceDiagBegin();
+    magic63UIBounceDiagPageEnter();
+    webBounceDiagRunning = 1;
+    webBounceDiagLastHeartbeatMs = to_ms_since_boot(get_absolute_time());
+    mg_http_reply(c, 200, s_json_header, "{\"state\":\"ok\"}");
+    return 1;
+}
+
+unsigned char webBounceDiagCancel(struct mg_connection *c)
+{
+    webBounceDiagStop();
+    mg_http_reply(c, 200, s_json_header, "{\"state\":\"ok\"}");
+    return 1;
+}
+
+void webBounceDiagPollTimeout(void)
+{
+    if(!webBounceDiagRunning) return;
+    unsigned int now = to_ms_since_boot(get_absolute_time());
+    if((unsigned int)(now - webBounceDiagLastHeartbeatMs) >= WEB_BOUNCE_DIAG_HEARTBEAT_TIMEOUT_MS)
+    {
+        debugEvent("bounce_web_timeout", (int)(now - webBounceDiagLastHeartbeatMs));
+        webBounceDiagStop();
+    }
+}
+
+unsigned char webBounceDiagStatus(struct mg_connection *c)
+{
+    webBounceDiagLastHeartbeatMs = to_ms_since_boot(get_absolute_time());
+    key_bounce_diag_result_t r = keyBounceDiagGetResult();
+    if(webBounceDiagRunning &&
+       (r.state == KEY_BOUNCE_DIAG_ERROR || r.state == KEY_BOUNCE_DIAG_IDLE))
+    {
+        webBounceDiagStop();
+    }
+
+    unsigned int count = r.edge_count;
+    if(count > KEY_BOUNCE_DIAG_INTERVAL_MAX) count = KEY_BOUNCE_DIAG_INTERVAL_MAX;
+    unsigned int releaseCount = r.release_edge_count;
+    if(releaseCount > KEY_BOUNCE_DIAG_INTERVAL_MAX) releaseCount = KEY_BOUNCE_DIAG_INTERVAL_MAX;
+
+    static char body[2048];
+    size_t used = 0;
+    used += snprintf(body + used, sizeof(body) - used,
+                     "{\"state\":%u,\"stateText\":\"%s\",\"running\":%u,\"row\":%u,\"col\":%u,\"edgeCount\":%u,\"releaseEdgeCount\":%u,\"stableUs\":%u,\"pressTotalUs\":%u,\"releaseTotalUs\":%u,\"error\":%u,\"intervals\":[",
+                     (unsigned int)r.state,
+                     keyBounceDiagStateText(r.state),
+                     (unsigned int)webBounceDiagRunning,
+                     (unsigned int)r.row,
+                     (unsigned int)r.col,
+                     r.edge_count,
+                     r.release_edge_count,
+                     r.stable_us,
+                     r.press_total_us,
+                     r.release_total_us,
+                     r.error);
+    for(unsigned int i = 0; i < count && used < sizeof(body); i++)
+    {
+        used += snprintf(body + used, sizeof(body) - used, "%s%u", i == 0 ? "" : ",", r.intervals[i]);
+    }
+    if(used < sizeof(body)) used += snprintf(body + used, sizeof(body) - used, "],\"releaseIntervals\":[");
+    for(unsigned int i = 0; i < releaseCount && used < sizeof(body); i++)
+    {
+        used += snprintf(body + used, sizeof(body) - used, "%s%u", i == 0 ? "" : ",", r.release_intervals[i]);
+    }
+    if(used < sizeof(body))
+    {
+        snprintf(body + used, sizeof(body) - used, "]}");
+    }
+    else
+    {
+        body[sizeof(body) - 1] = '\0';
+    }
+
+    mg_http_reply(c, 200, s_json_header, body);
+    return 1;
 }
 
 unsigned char webGetMacro(struct mg_http_message *hm,struct mg_connection *c)
@@ -409,22 +517,24 @@ unsigned char webCodexStatus(struct mg_http_message *hm,struct mg_connection *c)
 char *keyMapJson(unsigned char layer)
 {
   unsigned short *p = getKeyMap(layer);
-  int q[80] = {0};
+  static char out[640];
+  size_t used = 0;
 
-  for(int i = 0;i<80;i++)
+  used += snprintf(out + used, sizeof(out) - used, "{\"keyMap\":[");
+  for(int i = 0;i < 80 && used < sizeof(out);i++)
   {
-    q[i] = p[i];
-    q[i] &= 0xffff;
-  }  
+    unsigned int value = p[i] & 0xffffu;
+    used += snprintf(out + used, sizeof(out) - used, "%s%u", i == 0 ? "" : ",", value);
+  }
+  if(used < sizeof(out))
+  {
+    snprintf(out + used, sizeof(out) - used, "],\"layer\":%u}", layer);
+  }
+  else
+  {
+    out[sizeof(out) - 1] = '\0';
+  }
 
-  cJSON *root = cJSON_CreateObject();
-  cJSON * ArrNum = cJSON_CreateIntArray(q, 80);  
-  cJSON_AddItemToObject(root, "keyMap", ArrNum);
-  cJSON_AddNumberToObject(root, "layer", layer);
-  char *out=cJSON_Print(root);
-  cJSON_Delete(root);
-  //printf("%s \r\n",out);
- 
   return out;
 }
 /*web 端获取 激活层的数据 ，json layer = 0xff，返回当前激活的层，和keymap数据，
@@ -448,16 +558,14 @@ unsigned char getKeyboardMap(struct mg_http_message *hm,struct mg_connection *c)
 		cJSON_Delete(tempJson);
 		return 0;
 	}
-    printf("getKeyboardMap = %s \r\n",p);
     unsigned char tempLayer = ((tempJsonlayer->valueint > 0) && (tempJsonlayer->valueint < 5)) ? tempJsonlayer->valueint : getFlashLayerInfo();	
-    printf("tempLayer = %d tempJsonlayer->valueint =%d  getFlashLayerInfo() = %d\r\n",tempLayer, tempJsonlayer->valueint,getFlashLayerInfo());
+    printf("getKeyboardMap req=%d active=%d\r\n", tempJsonlayer->valueint, tempLayer);
 
     if(tempLayer == tempJsonlayer->valueint)  layerNumberSet(tempJsonlayer->valueint);
 
 	char *q = keyMapJson(tempLayer);
-    printf("%s \r\n",p);
 	mg_http_reply(c, 200, s_json_header, q);
-	free(q);
+    cJSON_Delete(tempJson);
 	
 	return 0;
 }
@@ -490,6 +598,7 @@ unsigned char setKeyValue(struct mg_http_message *hm,struct mg_connection *c)
 	q[tempJsonid->valueint - 1] = tempJsonKeyValue->valueint;
     unsigned char keymapSave(unsigned char layer);
     keymapSave(getFlashLayerInfo());
+    cJSON_Delete(tempJson);
 	mg_http_reply(c, 200, s_json_header, "{\"state\":\"ok\"}");
 	return 1;
 }
@@ -518,6 +627,7 @@ unsigned char webFileDelete(struct mg_connection *c)
 //升级版，避免内存不够用，每次传输1k数据
 static unsigned char webFileUpdatePbuff[1025] = {0};
 static unsigned char fileType = 0;  //1 网页文件，2GIF文件
+#define GIF_UPLOAD_MAX_SIZE (512 * 1024)
 
 char *dataEndScan(char *p,unsigned int len)
 {
@@ -604,6 +714,13 @@ unsigned char webFileUpdatePpakgEnter(struct mg_http_message *hm,struct mg_conne
 		return 0;
 	}
 
+    if(tempJsonLen->valueint < 0 || tempJsonLen->valueint > 1024)
+    {
+        cJSON_Delete(tempJson);
+        mg_http_reply(c, 200, s_json_header, "{\"success\":\"fail\"}");
+        return 0;
+    }
+
     unsigned int checkSumTemp = 0;
     for(int i = 0;i<tempJsonLen->valueint;i++)
     {
@@ -614,13 +731,22 @@ unsigned char webFileUpdatePpakgEnter(struct mg_http_message *hm,struct mg_conne
 
     if(checkSumTemp == tempJsoncheckSum->valueint)
     {
-        if(fileType == 1)   fsWriteHtmlFilePakg(tempJsonOffset->valueint,webFileUpdatePbuff,tempJsonLen->valueint,tempJsonOver->valueint);
-        else if(fileType == 2) fsWriteGifFilePakg(tempJsonOffset->valueint,webFileUpdatePbuff,tempJsonLen->valueint,tempJsonOver->valueint);
-        mg_http_reply(c, 200, s_json_header, "{\"state\":\"ok\"}");
+        unsigned char writeResult = 1;
+        if(fileType == 1) writeResult = fsWriteHtmlFilePakg(tempJsonOffset->valueint,webFileUpdatePbuff,tempJsonLen->valueint,tempJsonOver->valueint);
+        else if(fileType == 2) writeResult = fsWriteGifFilePakg(tempJsonOffset->valueint,webFileUpdatePbuff,tempJsonLen->valueint,tempJsonOver->valueint);
+        if(tempJsonOver->valueint) fileType = 0;
+        cJSON_Delete(tempJson);
+        if(writeResult == 0)
+        {
+            mg_http_reply(c, 200, s_json_header, "{\"state\":\"ok\"}");
+            return 0;
+        }
+        mg_http_reply(c, 200, s_json_header, "{\"success\":\"fail\"}");
         return 0;
     }
 
     printf("webFileUpdatePpakgEnter check erro\n");
+    cJSON_Delete(tempJson);
     mg_http_reply(c, 200, s_json_header, "{\"state\":\"fail\"}");
     return 0;
 }
@@ -638,10 +764,25 @@ unsigned char webFileUpdatePpakgStart(struct mg_http_message *hm,struct mg_conne
 
 	cJSON *tempJsonSize = cJSON_GetObjectItem(tempJson,"size");
 	cJSON *tempJsonType = cJSON_GetObjectItem(tempJson,"type");
+    if(tempJsonSize == NULL || tempJsonType == NULL)
+    {
+        cJSON_Delete(tempJson);
+        mg_http_reply(c, 200, s_json_header, "{\"success\":\"fail\"}");
+        return 0;
+    }
+
+    if(tempJsonType->valueint == 2 && tempJsonSize->valueint > GIF_UPLOAD_MAX_SIZE)
+    {
+        cJSON_Delete(tempJson);
+        fileType = 0;
+        mg_http_reply(c, 200, s_json_header, "{\"success\":\"fail\"}");
+        return 0;
+    }
 
     fileType = tempJsonType->valueint;
 
     printf("len = %d tempJsonSize = %d  tempJsonType = %d\r\n",tempJsonSize->valueint,tempJsonType->valueint);
+    cJSON_Delete(tempJson);
     mg_http_reply(c, 200, s_json_header, "{\"success\":\"ok\"}");
     return 0; 
 }

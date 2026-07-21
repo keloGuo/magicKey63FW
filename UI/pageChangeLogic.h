@@ -14,4 +14,7 @@ typedef struct
 }pageInfo;
 
 pageInfo* pageRegister(pageInfo* tempHomepage, lv_obj_t* pageHandleX, lv_obj_t* pageHandleY, int(*keyHandleCallback)(int,int,int));
+unsigned char pageResetToFirst(void);
+unsigned char pageTemporaryEnter(pageInfo *tempPage);
+unsigned char pageTemporaryLeave(pageInfo *tempPage);
 void encoderCallback(int t,unsigned char key);

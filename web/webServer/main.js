@@ -14,7 +14,9 @@ window.onload = function () {
     layerKeylisten();
     deviceControlListen();
     pageControlListen();
+    gifUploadInit();
     macroEditorInit();
+    bounceDiagInit();
     fsInfoGet();
   };
 
@@ -446,9 +448,16 @@ function deviceReboot()
     req.send('{"state":1}');
 }
 
+function uploadPageOpen()
+{
+    pageShow("gifUpload");
+}
+
 function deviceControlListen()
 {
     var rebootButton = document.getElementById("deviceReboot");
+    var uploadButton = document.getElementById("showUploadPage");
+    if(uploadButton != null) uploadButton.addEventListener('click', uploadPageOpen);
     if(rebootButton != null) rebootButton.addEventListener('click', deviceReboot);
 }
 
@@ -456,13 +465,18 @@ function pageShow(name)
 {
     var keyboardPage = document.getElementById("keyboardPage");
     var macroPage = document.getElementById("macroPage");
+    var gifUploadPage = document.getElementById("gifUploadPage");
+    var bounceDiagPage = document.getElementById("bounceDiagPage");
     var keyboardButton = document.getElementById("showKeyboardPage");
     var macroButton = document.getElementById("showMacroPage");
+    var uploadButton = document.getElementById("showUploadPage");
+    var bounceButton = document.getElementById("showBounceDiagPage");
     var sharedKeyboard = document.getElementById("sharedVirtualKeyboard");
     var sharedHome = document.getElementById("sharedKeyboardHome");
     var macroHost = document.getElementById("macroKeyboardHost");
     var macroBindKeyboard = document.getElementById("macroBindKeyboard");
     if(keyboardPage == null || macroPage == null) return 0;
+    if(currentPage == "bounceDiag" && name != "bounceDiag") bounceDiagCancelSilent();
     currentPage = name;
     if(sharedKeyboard != null)
     {
@@ -476,17 +490,487 @@ function pageShow(name)
     }
     keyboardPage.style.display = (name == "keyboard") ? "block" : "none";
     macroPage.style.display = (name == "macro") ? "block" : "none";
+    if(gifUploadPage != null) gifUploadPage.style.display = (name == "gifUpload") ? "block" : "none";
+    if(bounceDiagPage != null) bounceDiagPage.style.display = (name == "bounceDiag") ? "block" : "none";
     if(macroBindKeyboard != null) macroBindKeyboard.style.display = (name == "keyboard") ? "block" : "none";
     if(keyboardButton != null) keyboardButton.className = (name == "keyboard") ? "topButton topButtonActive" : "topButton";
     if(macroButton != null) macroButton.className = (name == "macro") ? "topButton topButtonActive" : "topButton";
+    if(uploadButton != null) uploadButton.className = (name == "gifUpload") ? "topButton topButtonActive" : "topButton";
+    if(bounceButton != null) bounceButton.className = (name == "bounceDiag") ? "topButton topButtonActive" : "topButton";
 }
 
 function pageControlListen()
 {
     var keyboardButton = document.getElementById("showKeyboardPage");
     var macroButton = document.getElementById("showMacroPage");
+    var bounceButton = document.getElementById("showBounceDiagPage");
     if(keyboardButton != null) keyboardButton.addEventListener('click', function(){ pageShow("keyboard"); });
     if(macroButton != null) macroButton.addEventListener('click', function(){ pageShow("macro"); });
+    if(bounceButton != null) bounceButton.addEventListener('click', bounceDiagEnter);
+}
+
+var bounceDiagTimer = 0;
+var bounceDiagLastState = -1;
+var bounceDiagRunActive = 0;
+var bounceDiagRunRecorded = 0;
+var bounceDiagHistory = [];
+
+function bounceDiagRequest(api, callback)
+{
+    var req = new XMLHttpRequest;
+    req.open('POST', 'http://192.168.3.1:80/api/' + api);
+    req.setRequestHeader('content-type', 'application/json');
+    req.onreadystatechange = function(v) {
+        if(v.currentTarget.readyState != 4) return 0;
+        if(v.currentTarget.status != 200) {
+            callback(null);
+            return 0;
+        }
+        var obj = null;
+        try { obj = JSON.parse(v.currentTarget.responseText); }
+        catch(e) { obj = null; }
+        callback(obj);
+    };
+    req.send('{"state":1}');
+}
+
+function bounceDiagCancelBeacon()
+{
+    if(navigator.sendBeacon)
+    {
+        var data = new Blob(['{"state":1}'], {type:'application/json'});
+        navigator.sendBeacon('http://192.168.3.1:80/api/bounceDiagCancel', data);
+    }
+}
+
+function bounceDiagStateCn(state)
+{
+    if(state == 0) return "等待开始";
+    if(state == 1) return "步骤 1：请按任意键开始检测";
+    if(state == 2) return "步骤 3：请松开按键，等待设备确认释放稳定";
+    if(state == 3) return "步骤 4：请正式按下目标按键并保持";
+    if(state == 4) return "正在采集：请继续保持按下";
+    if(state == 5) return "步骤 5：按下已稳定，请松开目标按键";
+    if(state == 6) return "正在采集松开抖动";
+    if(state == 7) return "检测完成，按任意键继续";
+    if(state == 8) return "检测异常";
+    return "未知状态";
+}
+
+function bounceDiagStepForState(state)
+{
+    if(state == 1) return "bounceStepSelect";
+    if(state == 2) return "bounceStepRelease";
+    if(state == 3 || state == 4) return "bounceStepPress";
+    if(state == 5 || state == 6 || state == 7 || state == 8) return "bounceStepDone";
+    return "bounceStepIdle";
+}
+
+function bounceDiagSetStep(state)
+{
+    var ids = ["bounceStepIdle","bounceStepSelect","bounceStepRelease","bounceStepPress","bounceStepDone"];
+    var active = bounceDiagStepForState(state);
+    var activeIndex = 0;
+    for(var i = 0;i<ids.length;i++)
+    {
+        if(ids[i] == active) activeIndex = i;
+    }
+    for(var j = 0;j<ids.length;j++)
+    {
+        var el = document.getElementById(ids[j]);
+        if(el == null) continue;
+        var cls = "bounceStep";
+        if(j < activeIndex) cls += " bounceStepDone";
+        if(ids[j] == active) cls += " bounceStepActive";
+        el.className = cls;
+    }
+}
+
+function bounceDiagKeyText(obj)
+{
+    if(obj == null || obj.row == null || obj.col == null) return "--";
+    if(parseInt(obj.row) >= 255 || parseInt(obj.col) >= 255) return "--";
+    return "第 " + (parseInt(obj.row) + 1) + " 行，第 " + (parseInt(obj.col) + 1) + " 列";
+}
+
+function bounceDiagShowIntervals(rootId, titleId, baseTitle, list, edgeCount)
+{
+    var root = document.getElementById(rootId);
+    var title = document.getElementById(titleId);
+    if(root == null) return 0;
+    root.innerHTML = "";
+    edgeCount = parseInt(edgeCount) || 0;
+    var shown = list == null ? 0 : list.length;
+    if(title != null)
+    {
+        if(edgeCount > shown) title.innerHTML = baseTitle + "（共 " + edgeCount + " 次，显示前 " + shown + " 次）";
+        else title.innerHTML = baseTitle;
+    }
+    if(list == null || list.length == 0)
+    {
+        root.innerHTML = "暂无跳变间隔";
+        return 0;
+    }
+    for(var i = 0;i<list.length;i++)
+    {
+        var box = document.createElement("div");
+        box.className = "bounceIntervalBox";
+        box.innerHTML = "第 " + (i + 1) + " 次 " + list[i] + "us";
+        root.appendChild(box);
+    }
+    if(edgeCount > list.length)
+    {
+        var more = document.createElement("div");
+        more.className = "bounceIntervalBox bounceIntervalMore";
+        more.innerHTML = "其余 " + (edgeCount - list.length) + " 次未缓存";
+        root.appendChild(more);
+    }
+}
+
+function bounceDiagTimeText(us)
+{
+    us = parseInt(us) || 0;
+    if(us <= 0) return "--";
+    if(us < 1000) return us + " us";
+    return (us / 1000).toFixed(1) + " ms";
+}
+
+function bounceDiagHistoryPush(obj)
+{
+    if(obj == null) return 0;
+    bounceDiagHistory.unshift({
+        key: bounceDiagKeyText(obj),
+        edgeCount: parseInt(obj.edgeCount) || 0,
+        releaseEdgeCount: parseInt(obj.releaseEdgeCount) || 0,
+        pressTotalUs: parseInt(obj.pressTotalUs) || 0,
+        releaseTotalUs: parseInt(obj.releaseTotalUs) || 0
+    });
+    if(bounceDiagHistory.length > 12) bounceDiagHistory.pop();
+    bounceDiagHistoryRender();
+}
+
+function bounceDiagHistoryRender()
+{
+    var root = document.getElementById("bounceHistoryList");
+    if(root == null) return 0;
+    root.innerHTML = "";
+    if(bounceDiagHistory.length == 0)
+    {
+        root.innerHTML = "暂无历史记录";
+        return 0;
+    }
+    for(var i = 0;i<bounceDiagHistory.length;i++)
+    {
+        var item = bounceDiagHistory[i];
+        var row = document.createElement("div");
+        row.className = "bounceHistoryItem";
+        row.innerHTML = "<strong>" + item.key + "</strong>" +
+            "<span>按下抖动 <strong>" + item.edgeCount + "</strong></span>" +
+            "<span>松开抖动 <strong>" + item.releaseEdgeCount + "</strong></span>" +
+            "<span>按下稳定 <strong>" + bounceDiagTimeText(item.pressTotalUs) + "</strong></span>" +
+            "<span>松开稳定 <strong>" + bounceDiagTimeText(item.releaseTotalUs) + "</strong></span>";
+        root.appendChild(row);
+    }
+}
+
+function bounceDiagShow(obj)
+{
+    if(obj == null)
+    {
+        var stateFail = document.getElementById("bounceDiagState");
+        if(stateFail != null) stateFail.innerHTML = "无法连接设备";
+        return 0;
+    }
+    var state = parseInt(obj.state) || 0;
+    var stateText = bounceDiagStateCn(state);
+    var keyText = bounceDiagKeyText(obj);
+    if(bounceDiagLastState == 7 && state != 7 && state != 0 && state != 8)
+    {
+        bounceDiagRunActive = 1;
+        bounceDiagRunRecorded = 0;
+    }
+    bounceDiagSetStep(state);
+
+    var stateTop = document.getElementById("bounceDiagState");
+    var targetTop = document.getElementById("bounceDiagTarget");
+    var metricState = document.getElementById("bounceMetricState");
+    var metricKey = document.getElementById("bounceMetricKey");
+    var metricEdges = document.getElementById("bounceMetricEdges");
+    var metricReleaseEdges = document.getElementById("bounceMetricReleaseEdges");
+    var metricPressTotal = document.getElementById("bounceMetricPressTotal");
+    var metricReleaseTotal = document.getElementById("bounceMetricReleaseTotal");
+    var start = document.getElementById("bounceDiagStart");
+    var cancel = document.getElementById("bounceDiagCancel");
+
+    if(stateTop != null) stateTop.innerHTML = stateText;
+    if(targetTop != null) targetTop.innerHTML = keyText;
+    if(metricState != null) metricState.innerHTML = stateText;
+    if(metricKey != null) metricKey.innerHTML = keyText;
+    if(metricEdges != null) metricEdges.innerHTML = obj.edgeCount == null ? "--" : obj.edgeCount;
+    if(metricReleaseEdges != null) metricReleaseEdges.innerHTML = obj.releaseEdgeCount == null ? "--" : obj.releaseEdgeCount;
+    if(metricPressTotal != null) metricPressTotal.innerHTML = bounceDiagTimeText(obj.pressTotalUs);
+    if(metricReleaseTotal != null) metricReleaseTotal.innerHTML = bounceDiagTimeText(obj.releaseTotalUs);
+    if(start != null) start.disabled = state != 0 && state != 7 && state != 8;
+    if(cancel != null) cancel.disabled = state == 0 || state == 8;
+
+    bounceDiagShowIntervals("bounceIntervalList", "bounceIntervalTitle", "按下跳变间隔", obj.intervals || [], obj.edgeCount);
+    bounceDiagShowIntervals("bounceReleaseIntervalList", "bounceReleaseIntervalTitle", "松开跳变间隔", obj.releaseIntervals || [], obj.releaseEdgeCount);
+    if(state == 7 && bounceDiagRunActive && bounceDiagRunRecorded == 0)
+    {
+        bounceDiagHistoryPush(obj);
+        bounceDiagRunRecorded = 1;
+    }
+    if(state == 8)
+    {
+        bounceDiagRunRecorded = 1;
+        bounceDiagRunActive = 0;
+    }
+    bounceDiagLastState = state;
+}
+
+function bounceDiagStatus()
+{
+    if(currentPage != "bounceDiag") return 0;
+    bounceDiagRequest("bounceDiagStatus", bounceDiagShow);
+}
+
+function bounceDiagEnter()
+{
+    pageShow("bounceDiag");
+    bounceDiagRequest("bounceDiagStatus", function(obj) {
+        bounceDiagShow(obj);
+        if(obj == null) return 0;
+        var state = parseInt(obj.state) || 0;
+        if(state == 0 || state == 8) bounceDiagStart();
+    });
+}
+
+function bounceDiagStart()
+{
+    bounceDiagRunActive = 1;
+    bounceDiagRunRecorded = 0;
+    bounceDiagRequest("bounceDiagStart", function(obj) {
+        bounceDiagStatus();
+    });
+}
+
+function bounceDiagCancel()
+{
+    bounceDiagRequest("bounceDiagCancel", function(obj) {
+        bounceDiagRunActive = 0;
+        bounceDiagRunRecorded = 1;
+        bounceDiagStatus();
+    });
+}
+
+function bounceDiagCancelSilent()
+{
+    bounceDiagRunActive = 0;
+    bounceDiagRunRecorded = 1;
+    bounceDiagRequest("bounceDiagCancel", function(obj) {});
+}
+
+function bounceDiagInit()
+{
+    var start = document.getElementById("bounceDiagStart");
+    var cancel = document.getElementById("bounceDiagCancel");
+    if(start == null) return 0;
+    start.addEventListener('click', bounceDiagStart);
+    if(cancel != null) cancel.addEventListener('click', bounceDiagCancel);
+    window.addEventListener('pagehide', function(){
+        if(currentPage == "bounceDiag") bounceDiagCancelBeacon();
+    });
+    window.addEventListener('beforeunload', function(){
+        if(currentPage == "bounceDiag") bounceDiagCancelBeacon();
+    });
+    bounceDiagHistoryRender();
+    if(bounceDiagTimer == 0) bounceDiagTimer = setInterval(bounceDiagStatus, 250);
+}
+
+var gifUploadChunkSize = 1024;
+var gifUploadMaxSize = 512 * 1024;
+var gifUploadBusy = 0;
+var gifUploadCancelFlag = 0;
+
+function gifUploadSetState(text)
+{
+    var state = document.getElementById("gifUploadState");
+    if(state != null) state.innerHTML = text;
+}
+
+function gifUploadRequestJson(api, data, callback)
+{
+    var req = new XMLHttpRequest;
+    req.open('POST', 'http://192.168.3.1:80/api/' + api);
+    req.setRequestHeader('content-type', 'application/json');
+    req.onreadystatechange = function(v) {
+        if(v.currentTarget.readyState != 4) return 0;
+        if(v.currentTarget.status != 200) {
+            callback(false);
+            return 0;
+        }
+        var obj = {};
+        try { obj = JSON.parse(v.currentTarget.responseText); }
+        catch(e) { callback(false); return 0; }
+        callback(obj.success != "fail" && obj.state != "fail");
+    };
+    req.send(JSON.stringify(data));
+}
+
+function gifUploadRequestChunk(fileObj, start, len, callback)
+{
+    var req = new XMLHttpRequest;
+    var fd = new FormData();
+    fd.append('file', fileObj.slice(start, start + len, "application/octet-stream"));
+    req.open('POST', 'http://192.168.3.1:80/api/updateP');
+    req.onreadystatechange = function(v) {
+        if(v.currentTarget.readyState != 4) return 0;
+        if(v.currentTarget.status != 200) {
+            callback(false);
+            return 0;
+        }
+        var obj = {};
+        try { obj = JSON.parse(v.currentTarget.responseText); }
+        catch(e) { callback(false); return 0; }
+        callback(obj.success != "fail");
+    };
+    req.send(fd);
+}
+
+function gifUploadChecksum(fileObj, start, len, callback)
+{
+    var reader = new FileReader();
+    reader.onload = function() {
+        var data = new DataView(reader.result);
+        var sum = 0;
+        for(var i = 0; i < data.byteLength; i++) sum += data.getUint8(i);
+        callback(sum);
+    };
+    reader.onerror = function() {
+        callback(-1);
+    };
+    reader.readAsArrayBuffer(fileObj.slice(start, start + len));
+}
+
+function gifUploadCheckSize(fileObj, callback)
+{
+    var reader = new FileReader();
+    reader.onload = function() {
+        var data = new DataView(reader.result);
+        if(data.byteLength < 10) {
+            callback(false);
+            return;
+        }
+        var sign = String.fromCharCode(data.getUint8(0), data.getUint8(1), data.getUint8(2));
+        var width = data.getUint16(6, true);
+        var height = data.getUint16(8, true);
+        callback(sign == "GIF" && width == 160 && height == 80);
+    };
+    reader.onerror = function() {
+        callback(false);
+    };
+    reader.readAsArrayBuffer(fileObj.slice(0, 10));
+}
+
+function gifUploadProgress(offset, total)
+{
+    var bar = document.getElementById("gifUploadProgress");
+    if(bar == null) return;
+    bar.max = total;
+    bar.value = offset;
+}
+
+function gifUploadSendNext(fileObj, offset)
+{
+    if(gifUploadCancelFlag) {
+        gifUploadBusy = 0;
+        gifUploadSetState("已取消");
+        return;
+    }
+    if(offset >= fileObj.size) {
+        gifUploadBusy = 0;
+        gifUploadProgress(fileObj.size, fileObj.size);
+        gifUploadSetState("上传完成");
+        fsInfoGet();
+        return;
+    }
+
+    var len = (offset + gifUploadChunkSize > fileObj.size) ? (fileObj.size - offset) : gifUploadChunkSize;
+    gifUploadSetState("上传中 " + Math.floor((offset * 100) / fileObj.size) + "%");
+    gifUploadChecksum(fileObj, offset, len, function(sum) {
+        if(sum < 0) {
+            gifUploadBusy = 0;
+            gifUploadSetState("读取失败");
+            return;
+        }
+        gifUploadRequestChunk(fileObj, offset, len, function(ok) {
+            if(!ok) {
+                gifUploadBusy = 0;
+                gifUploadSetState("上传失败");
+                return;
+            }
+            gifUploadRequestJson("webFileUpdatePpakgEnter", {
+                offset: offset,
+                cleckSum: sum,
+                len: len,
+                over: (offset + len >= fileObj.size) ? 1 : 0
+            }, function(ok2) {
+                if(!ok2) {
+                    gifUploadBusy = 0;
+                    gifUploadSetState("写入失败");
+                    return;
+                }
+                gifUploadProgress(offset + len, fileObj.size);
+                gifUploadSendNext(fileObj, offset + len);
+            });
+        });
+    });
+}
+
+function gifUploadStart()
+{
+    if(gifUploadBusy) return;
+    var input = document.getElementById("gifUploadFile");
+    if(input == null || input.files.length == 0) {
+        gifUploadSetState("请选择 GIF");
+        return;
+    }
+    var fileObj = input.files[0];
+    if(fileObj.name.slice(fileObj.name.length - 4) != ".gif") {
+        gifUploadSetState("文件类型错误");
+        return;
+    }
+    if(fileObj.size > gifUploadMaxSize) {
+        gifUploadSetState("超过 512K");
+        return;
+    }
+    gifUploadCheckSize(fileObj, function(ok) {
+        if(!ok) {
+            gifUploadSetState("分辨率必须 160x80");
+            return;
+        }
+        gifUploadBusy = 1;
+        gifUploadCancelFlag = 0;
+        gifUploadProgress(0, fileObj.size);
+        gifUploadRequestJson("updateStart", {size: fileObj.size, type: 2}, function(ok2) {
+            if(!ok2) {
+                gifUploadBusy = 0;
+                gifUploadSetState("启动失败");
+                return;
+            }
+            gifUploadSendNext(fileObj, 0);
+        });
+    });
+}
+
+function gifUploadInit()
+{
+    var start = document.getElementById("gifUploadStart");
+    var cancel = document.getElementById("gifUploadCancel");
+    if(start != null) start.addEventListener('click', gifUploadStart);
+    if(cancel != null) cancel.addEventListener('click', function() {
+        gifUploadCancelFlag = 1;
+    });
 }
 
 var macroMaxActions = 64;
@@ -829,20 +1313,27 @@ function macroRenderCard(root, macro, selected)
     card.setAttribute("data-id", macro.id);
     card.onclick = function(v){ macroLoadById(parseInt(v.currentTarget.getAttribute("data-id"))); };
 
+    var info = document.createElement("div");
+    info.className = "macroCardInfo";
+
     var idBox = document.createElement("div");
     idBox.className = "macroActionBox macroInfoBox";
     idBox.innerHTML = "M" + macro.id;
-    card.appendChild(idBox);
+    info.appendChild(idBox);
 
     var modeBox = document.createElement("div");
     modeBox.className = "macroActionBox macroInfoBox macroModeBox";
     modeBox.innerHTML = macroModeText(macro.mode);
-    card.appendChild(modeBox);
+    info.appendChild(modeBox);
 
     var countBox = document.createElement("div");
     countBox.className = "macroActionBox macroInfoBox macroCountBox";
     countBox.innerHTML = (macro.actions || []).length + " 个";
-    card.appendChild(countBox);
+    info.appendChild(countBox);
+    card.appendChild(info);
+
+    var actionRoot = document.createElement("div");
+    actionRoot.className = "macroCardActions";
 
     var actions = macro.actions || [];
     for(var i = 0;i<actions.length;i++)
@@ -865,11 +1356,9 @@ function macroRenderCard(root, macro, selected)
                 macroLoadById(id);
             }
         };
-        card.appendChild(box);
+        actionRoot.appendChild(box);
     }
-    var clear = document.createElement("div");
-    clear.style.clear = "both";
-    card.appendChild(clear);
+    card.appendChild(actionRoot);
     root.appendChild(card);
 }
 
@@ -1130,11 +1619,13 @@ function webServerDataHandle(v)
     if(obj.keyMap != null)
     {
 
-        document.getElementById("layer1").style.background = "#ffffff";
-        document.getElementById("layer2").style.background = "#ffffff";
-        document.getElementById("layer3").style.background = "#ffffff";
-        document.getElementById("layer4").style.background = "#ffffff";
-        document.getElementById("layer"+obj.layer).style.background = "red";
+        for(var layerIndex = 1;layerIndex < 5;layerIndex++)
+        {
+            var layerObj = document.getElementById("layer" + layerIndex);
+            if(layerObj != null) layerObj.style.background = "#ffffff";
+        }
+        var activeLayerObj = document.getElementById("layer" + obj.layer);
+        if(activeLayerObj != null) activeLayerObj.style.background = "red";
 
         for(var i = 0; i<80 ; i++)
         {
@@ -1145,14 +1636,16 @@ function webServerDataHandle(v)
             if((obj.keyMap[i] >> 8)  == 2 )
             {
                 var number = (obj.keyMap[i]  & 0xff);
-                var tempID ='IDM' + number ; 
-                idShow = document.getElementById(tempID).getAttribute("name");
+                var tempID ='IDM' + number ;
+                var tempObj = document.getElementById(tempID);
+                if(tempObj != null) idShow = tempObj.getAttribute("name");
             }
             else if((obj.keyMap[i] >> 8)  == 1 )
             {
                 var number = (obj.keyMap[i]  & 0xff);
-                var tempID ='IDS' + number ; 
-                idShow = document.getElementById(tempID).getAttribute("name");
+                var tempID ='IDS' + number ;
+                var tempObj = document.getElementById(tempID);
+                if(tempObj != null) idShow = tempObj.getAttribute("name");
             }
             else if((obj.keyMap[i] >> 8)  == 3 )
             {
@@ -1165,11 +1658,12 @@ function webServerDataHandle(v)
             }
             else
             {
-                if(obj.keyMap[i] < 8)       
+                if(obj.keyMap[i] < 8)
                 {
                     var number = obj.keyMap[i] + 1;
                     var tempID  ='ID' + number;
-                    idShow = document.getElementById(tempID).innerHTML
+                    var tempObj = document.getElementById(tempID);
+                    if(tempObj != null) idShow = tempObj.innerHTML
                 }
                 else
                 {
@@ -1177,7 +1671,8 @@ function webServerDataHandle(v)
                     var temp = number.toString(16);
                     var temp2 = temp.toUpperCase()
                     var tempID ='ID0x' + temp2;
-                    idShow = document.getElementById(tempID).innerHTML
+                    var tempObj = document.getElementById(tempID);
+                    if(tempObj != null) idShow = tempObj.innerHTML
                 }
             }
             //console.log(idShow)

@@ -8,8 +8,12 @@
 #include "src/extra/others/snapshot/lv_snapshot.h"
 #include "magic63UI.h"
 #include "pageChangeLogic.h"
+#include "scratch.h"
 
 void userPrintf(const char* format, ...);
+void debugStage(unsigned char core, unsigned int stage);
+void debugHeapSample(void);
+void debugEvent(const char *tag, int value);
 
 //主页面上，左右导航页面切换，短按切换到子页面
 //子页面上，短按切换页面，长安返回到主页免，左右切换功能
@@ -21,9 +25,59 @@ void userPrintf(const char* format, ...);
 
 pageInfo* pageHand = NULL; //链表头，
 pageInfo* Activated = NULL;
+static pageInfo* temporaryReturnPage = NULL;
 
 #define PAGE_WRAP_SCROLL_ANIM_TIME_MIN 200
 #define PAGE_WRAP_SCROLL_ANIM_TIME_MAX 400
+#define PAGE_WRAP_SNAPSHOT_HEAP_RESERVE 12288u
+
+static unsigned char pageWrapSnapshotActive = 0;
+
+static void pageHideScrollbar(lv_obj_t *obj)
+{
+	if(obj == NULL) return;
+	lv_obj_set_scrollbar_mode(obj, LV_SCROLLBAR_MODE_OFF);
+}
+
+static unsigned char pageSnapshotMemoryAvailable(uint32_t snapshotNeed)
+{
+	if(snapshotNeed == 0 || snapshotNeed > scratchSize()) return 0;
+	if(scratchIsBusy()) return 0;
+
+	size_t probeSize = PAGE_WRAP_SNAPSHOT_HEAP_RESERVE;
+	void *probe = malloc(probeSize);
+	if(probe == NULL) return 0;
+	free(probe);
+	return 1;
+}
+
+static lv_img_dsc_t *pageSnapshotTakeToScratch(lv_obj_t *obj, lv_img_cf_t cf, uint32_t snapshotNeed)
+{
+	void *buf = scratchAcquire(snapshotNeed, "snapshot");
+	if(buf == NULL) return NULL;
+
+	lv_img_dsc_t *dsc = lv_mem_alloc(sizeof(lv_img_dsc_t));
+	if(dsc == NULL)
+	{
+		scratchRelease(buf, "snapshot");
+		return NULL;
+	}
+
+	if(lv_snapshot_take_to_buf(obj, cf, dsc, buf, snapshotNeed) != LV_RES_OK)
+	{
+		lv_mem_free(dsc);
+		scratchRelease(buf, "snapshot");
+		return NULL;
+	}
+	return dsc;
+}
+
+static void pageSnapshotFreeFromScratch(lv_img_dsc_t *snapshot)
+{
+	if(snapshot == NULL) return;
+	if(snapshot->data != NULL) scratchRelease((void *)snapshot->data, "snapshot");
+	lv_mem_free(snapshot);
+}
 
 static void pageTranslateXAnim(void * obj, int32_t v)
 {
@@ -45,7 +99,8 @@ static void pageWrapSnapshotReady(lv_anim_t * a)
 	lv_img_dsc_t * snapshot = (lv_img_dsc_t *)lv_anim_get_user_data(a);
 	lv_obj_t * img = (lv_obj_t *)a->var;
 	lv_obj_del(img);
-	if (snapshot != NULL) lv_snapshot_free(snapshot);
+	pageSnapshotFreeFromScratch(snapshot);
+	pageWrapSnapshotActive = 0;
 }
 
 static void pageWrapSlide(lv_img_dsc_t * snapshot, lv_area_t * oldCoords, lv_obj_t * newObj, int direction)
@@ -58,6 +113,12 @@ static void pageWrapSlide(lv_img_dsc_t * snapshot, lv_area_t * oldCoords, lv_obj
 	if (snapshot != NULL)
 	{
 		snapshotImg = lv_img_create(lv_scr_act());
+		if (snapshotImg == NULL)
+		{
+			pageSnapshotFreeFromScratch(snapshot);
+			pageWrapSnapshotActive = 0;
+			return;
+		}
 		lv_img_set_src(snapshotImg, snapshot);
 		lv_obj_set_pos(snapshotImg, oldCoords->x1, oldCoords->y1);
 		lv_obj_move_foreground(snapshotImg);
@@ -94,14 +155,15 @@ static void pageWrapSlide(lv_img_dsc_t * snapshot, lv_area_t * oldCoords, lv_obj
 
 unsigned char pageChange(int direction,unsigned char homeOrSub) 
 { 
+	debugStage(0, 20);
+	debugHeapSample();
 	// userPrintf("pageChange %d %d \n",direction,homeOrSub);
 	pageInfo* oldPage = Activated;
 	lv_anim_enable_t pageAnim = LV_ANIM_ON;
 	int wrapDirection = 0;
 	lv_img_dsc_t * wrapSnapshot = NULL;
+	uint32_t wrapSnapshotNeed = 0;
 	lv_area_t wrapOldCoords;
-
-	printf("Activated->pageHandle A %d %d %d %d\n",Activated->pageHandleX->coords.x1,Activated->pageHandleX->coords.y1,Activated->pageHandleX->coords.x2,Activated->pageHandleX->coords.y2);
 
 	if ((homeOrSub == 1) && (Activated->subpage != NULL))
 	{
@@ -131,9 +193,6 @@ unsigned char pageChange(int direction,unsigned char homeOrSub)
 	}
 
 	// userPrintf("pageChange 2 %x %x \n",Activated->pageHandleX,Activated->pageHandleY);
-	printf("Activated->pageHandle B %d %d %d %d\n",Activated->pageHandleX->coords.x1,Activated->pageHandleX->coords.y1,Activated->pageHandleX->coords.x2,Activated->pageHandleX->coords.y2);
-	printf("Activated->pageHandle B %d %d %d %d\n",Activated->pageHandleY->coords.x1,Activated->pageHandleY->coords.y1,Activated->pageHandleY->coords.x2,Activated->pageHandleY->coords.y2);
-
 	// Activated->pageHandleX->coords.x1 = 160;
 	// Activated->pageHandleX->coords.y1 = 2;
 
@@ -143,7 +202,36 @@ unsigned char pageChange(int direction,unsigned char homeOrSub)
 	if (wrapDirection != 0)
 	{
 		lv_obj_get_coords(oldPage->pageHandleY, &wrapOldCoords);
-		wrapSnapshot = lv_snapshot_take(oldPage->pageHandleY, LV_IMG_CF_TRUE_COLOR);
+		debugStage(0, 21);
+		if (pageWrapSnapshotActive)
+		{
+			debugEvent("snapshot_skip_busy", 0);
+			wrapDirection = 0;
+		}
+	}
+
+	if (wrapDirection != 0)
+	{
+		wrapSnapshotNeed = lv_snapshot_buf_size_needed(oldPage->pageHandleY, LV_IMG_CF_TRUE_COLOR);
+		if (!pageSnapshotMemoryAvailable(wrapSnapshotNeed))
+		{
+			debugEvent("snapshot_skip_mem", (int)wrapSnapshotNeed);
+			wrapDirection = 0;
+		}
+	}
+
+	if (wrapDirection != 0)
+	{
+		wrapSnapshot = pageSnapshotTakeToScratch(oldPage->pageHandleY, LV_IMG_CF_TRUE_COLOR, wrapSnapshotNeed);
+		if (wrapSnapshot == NULL)
+		{
+			debugEvent("snapshot_fail", 0);
+			wrapDirection = 0;
+		}
+		else
+		{
+			pageWrapSnapshotActive = 1;
+		}
 	}
 
 	lv_obj_scroll_to_view_recursive(Activated->pageHandleX, pageAnim);
@@ -151,7 +239,51 @@ unsigned char pageChange(int direction,unsigned char homeOrSub)
 	if (wrapDirection != 0) pageWrapSlide(wrapSnapshot, &wrapOldCoords, Activated->pageHandleY, wrapDirection);
 
 	if (Activated->keyHandleCallback != NULL) Activated->keyHandleCallback(0,1,0); //进入这一页
+	debugHeapSample();
+	debugStage(0, 0);
 
+	return 0;
+}
+
+unsigned char pageResetToFirst(void)
+{
+	if (pageHand == NULL) return 1;
+	Activated = pageHand;
+	lv_obj_scroll_to_view_recursive(Activated->pageHandleX, LV_ANIM_OFF);
+	lv_obj_scroll_to_view_recursive(Activated->pageHandleY, LV_ANIM_OFF);
+	return 0;
+}
+
+unsigned char pageTemporaryEnter(pageInfo *tempPage)
+{
+	if(tempPage == NULL || Activated == NULL) return 1;
+	if(Activated != tempPage) temporaryReturnPage = Activated;
+	Activated = tempPage;
+	if(Activated->pageHandleX == Activated->pageHandleY)
+	{
+		lv_obj_clear_flag(Activated->pageHandleY, LV_OBJ_FLAG_HIDDEN);
+		lv_obj_move_foreground(Activated->pageHandleY);
+	}
+	else
+	{
+		lv_obj_scroll_to_view_recursive(Activated->pageHandleX, LV_ANIM_OFF);
+		lv_obj_scroll_to_view_recursive(Activated->pageHandleY, LV_ANIM_OFF);
+	}
+	if (Activated->keyHandleCallback != NULL) Activated->keyHandleCallback(0,1,0);
+	return 0;
+}
+
+unsigned char pageTemporaryLeave(pageInfo *tempPage)
+{
+	if(tempPage == NULL || Activated != tempPage) return 1;
+	if(tempPage->pageHandleX == tempPage->pageHandleY) lv_obj_add_flag(tempPage->pageHandleY, LV_OBJ_FLAG_HIDDEN);
+	if(temporaryReturnPage != NULL) Activated = temporaryReturnPage;
+	else if(pageHand != NULL) Activated = pageHand;
+	else return 1;
+	temporaryReturnPage = NULL;
+	lv_obj_scroll_to_view_recursive(Activated->pageHandleX, LV_ANIM_OFF);
+	lv_obj_scroll_to_view_recursive(Activated->pageHandleY, LV_ANIM_OFF);
+	if (Activated->keyHandleCallback != NULL) Activated->keyHandleCallback(0,1,0);
 	return 0;
 }
 
@@ -174,12 +306,19 @@ unsigned char pageInsert(pageInfo* hand, pageInfo* newPage)
 
 pageInfo* pageRegister(pageInfo* tempHomepage,lv_obj_t* pageHandleX, lv_obj_t* pageHandleY, int(*keyHandleCallback)(int,int,int))
 {
+	pageHideScrollbar(pageHandleX);
+	pageHideScrollbar(pageHandleY);
+
 	if (tempHomepage == NULL) //注册母页
 	{
 		if (pageHand == NULL) //第一页
 		{
 			pageHand = (pageInfo *)malloc(sizeof(pageInfo));
-			if (pageHand == NULL)  return NULL;//没有没存
+			if (pageHand == NULL)
+			{
+				debugEvent("page_malloc_fail", 1);
+				return NULL;//没有没存
+			}
 
 			pageHand->homepage = NULL; //自己是一个母页，
 			pageHand->keyHandleCallback = keyHandleCallback;	
@@ -195,7 +334,11 @@ pageInfo* pageRegister(pageInfo* tempHomepage,lv_obj_t* pageHandleX, lv_obj_t* p
 		else
 		{
 			pageInfo* newPage = (pageInfo*)malloc(sizeof(pageInfo));
-			if (newPage == NULL) return NULL;//没有没存
+			if (newPage == NULL)
+			{
+				debugEvent("page_malloc_fail", 2);
+				return NULL;//没有没存
+			}
 			
 			newPage->homepage = NULL;
 			newPage->keyHandleCallback = keyHandleCallback;
@@ -211,7 +354,11 @@ pageInfo* pageRegister(pageInfo* tempHomepage,lv_obj_t* pageHandleX, lv_obj_t* p
 	else  //注册子页
 	{
 		pageInfo* newPage = (pageInfo*)malloc(sizeof(pageInfo));
-		if (newPage == NULL) return NULL;//没有没存
+		if (newPage == NULL)
+		{
+			debugEvent("page_malloc_fail", 3);
+			return NULL;//没有没存
+		}
 
 		newPage->homepage = (void *)tempHomepage;
 		newPage->keyHandleCallback = keyHandleCallback;
@@ -244,7 +391,15 @@ bool encoderProcess(repeating_timer_t *rt)  //t是，左右滑，key是按键是
 	//userPrintf("temp encoderCallback %d %d %d\r\n ", t,key, Activated->homepage == NULL);
 	if ((Activated->homepage == NULL)) //当前在母页
 	{
-		if (Activated->keyHandleCallback != NULL) Activated->keyHandleCallback(key,0,0);
+		int handled = 0;
+		int eventValue = (t != 0) ? t : key;
+		if (Activated->keyHandleCallback != NULL) handled = Activated->keyHandleCallback(eventValue,0,key);
+		if (handled)
+		{
+			t = 0;
+			key = 0;
+			return 1;
+		}
 		if (t != 0) //左右划
 		{
 			pageChange(t, 0);

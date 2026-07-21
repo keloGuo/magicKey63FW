@@ -17,11 +17,23 @@ add_compile_options(-Wall
         -Wno-maybe-uninitialized -O3
          
         )
+add_compile_definitions(PICO_MALLOC_PANIC=0)
+option(MAGIC63_ENABLE_USB_CDC_DEBUG "Enable USB CDC debug serial interface" OFF)
+option(MAGIC63_ENABLE_UART_STDIO "Enable UART stdio printf output" OFF)
+option(MAGIC63_ENABLE_DEBUG_OUTPUT "Enable formatted debug output" OFF)
+add_compile_definitions(
+  MAGIC63_ENABLE_USB_CDC_DEBUG=$<BOOL:${MAGIC63_ENABLE_USB_CDC_DEBUG}>
+  MAGIC63_ENABLE_UART_STDIO=$<BOOL:${MAGIC63_ENABLE_UART_STDIO}>
+  MAGIC63_ENABLE_DEBUG_OUTPUT=$<BOOL:${MAGIC63_ENABLE_DEBUG_OUTPUT}>
+)
  
 #add_link_options( -Wl,--section-start=.config_addr=0x10020000)
 
 pico_sdk_init()
 
+include_directories(./macroRecorder)
+
+add_subdirectory(./scratch)
 add_subdirectory(./keyboardScan)
 add_subdirectory(./rndis) 
 add_subdirectory(./usb) 
@@ -33,6 +45,7 @@ add_subdirectory(./dataSave)
 add_subdirectory(./apm)
 add_subdirectory(./boot)
 add_subdirectory(./debug)
+add_subdirectory(./macroRecorder)
 add_subdirectory(./UI) 
 add_subdirectory(./lib/cJson) 
 add_subdirectory(./ws2812) 
@@ -53,16 +66,24 @@ include_directories(./dataSave)
 include_directories(./apm)
 include_directories(./boot)
 include_directories(./debug)
+include_directories(./macroRecorder)
 
 add_definitions(-DDUAL_CONFIG=1) 
 add_definitions(-DPICO_FLASH_SPI_CLKDIV=2) 
+
 add_executable(firmware 
   main.c
   ./lvglPort/lv_port_disp.c
 )
 
 target_include_directories(firmware PUBLIC . ${PICO_SDK_PATH}/lib/tinyusb/lib/networking) 
-target_link_libraries(firmware pico_stdlib pico_multicore rndis userUsb keyboardScan st7735 lvgl UI keymap dataSave apm boot debugModule tinyusb_device hardware_flash littleFs cjson ws2812)
+target_link_libraries(firmware pico_stdlib pico_multicore rndis userUsb keyboardScan st7735 lvgl UI keymap dataSave apm boot debugModule tinyusb_device hardware_flash littleFs cjson macroRecorder ws2812 scratch)
+target_link_options(firmware PRIVATE
+  -Wl,--wrap=_malloc_r
+  -Wl,--wrap=_calloc_r
+  -Wl,--wrap=_realloc_r
+  -Wl,--wrap=_free_r
+)
 pico_enable_stdio_usb(firmware 0)    # Route stdio
-pico_enable_stdio_uart(firmware 1)   # to the UART
+pico_enable_stdio_uart(firmware ${MAGIC63_ENABLE_UART_STDIO})   # to the UART
 pico_add_extra_outputs(firmware)     # create map/bin/hex file etc.  
