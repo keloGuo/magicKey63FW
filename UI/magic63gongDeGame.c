@@ -81,11 +81,15 @@ static int PageGongDeGanmeCallback(int t,int inOrOut,int k)
     {
         printf("in  Page gongde game \n");
         gongDeing = 1;
-        gongDeGifCreate();
         lv_arc_set_value(gongDeBar, gongDeCount); //更新进度条
         char temp[5] = {'\0','\0','\0','\0','\0'};
         sprintf(temp,"%d",gongDeCountH);
         lv_label_set_text(gongDeCountShow, temp);
+        if(gongDeGifCreate() == 0 && gongDeGif != NULL && gongDeBusy == 0)
+        {
+            gongDeBusy = 1;
+            lv_gif_restart(gongDeGif);
+        }
         return 0;
     }
     else if(inOrOut == -1)
