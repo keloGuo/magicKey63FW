@@ -443,8 +443,8 @@ function virtualKeyboardKeylistenLayer() //虚拟键盘按键监听
 
 function virtualKeyboardKeylistenPage()
 {
-    var pageIds = ["IDP1","IDP2","IDP3","IDP4","IDP5","IDP6","IDP7","IDP8","IDP9",
-                   "IDQ1","IDQ2","IDQ3","IDQ4","IDQ5","IDQ6","IDQ8"];
+    var pageIds = ["IDP1","IDP2","IDP3","IDP4","IDP5","IDP6","IDP7","IDP8","IDP9","IDP10",
+                   "IDQ1","IDQ2","IDQ3","IDQ4","IDQ5","IDQ6","IDQ8","IDQ9"];
     for(var i = 0;i<pageIds.length;i++)
     {
         var that = document.getElementById(pageIds[i]);
@@ -1339,6 +1339,30 @@ function macroRender()
     macroUpdateButtons();
 }
 
+function macroStoreFile(obj)
+{
+    if(obj == null) return 0;
+    var id = parseInt(obj.id) || 0;
+    if(id <= 0) return 0;
+    var item = {
+        id: id,
+        mode: parseInt(obj.mode) || 0,
+        actions: []
+    };
+    var actions = obj.actions || [];
+    for(var i = 0;i<actions.length;i++) item.actions.push(macroNormalizeAction(actions[i]));
+    for(var j = 0;j<macroFiles.length;j++)
+    {
+        if(parseInt(macroFiles[j].id) == id)
+        {
+            macroFiles[j] = item;
+            return 1;
+        }
+    }
+    macroFiles.push(item);
+    return 1;
+}
+
 function macroRenderList()
 {
     var macroList = document.getElementById("macroList");
@@ -1439,13 +1463,24 @@ function macroLoadObject(obj)
 
 function macroShow(obj)
 {
+    macroStoreFile(obj);
     macroLoadObject(obj);
 }
 
 function macroListShow(obj)
 {
     if(obj.maxActions != null) macroMaxActions = obj.maxActions;
-    macroFiles = obj.macros || [];
+    var ids = obj.ids || [];
+    if(ids.length == 0 && obj.macros != null)
+    {
+        for(var m = 0;m<obj.macros.length;m++) ids.push(parseInt(obj.macros[m].id));
+    }
+    macroFiles = [];
+    for(var n = 0;n<ids.length;n++)
+    {
+        var id = parseInt(ids[n]) || 0;
+        if(id > 0) macroFiles.push({id:id, mode:0, actions:[]});
+    }
     macroBindRender();
     if(macroFiles.length > 0)
     {
@@ -1460,11 +1495,31 @@ function macroListShow(obj)
             }
         }
         macroLoadById(loadId, 1);
+        for(var j = 0;j<macroFiles.length;j++)
+        {
+            var id = parseInt(macroFiles[j].id);
+            if(id != loadId) macroFetchListItem(id);
+        }
     }
     else
     {
         macroLoadObject({id:1, mode:0, actions:[], maxActions:macroMaxActions});
     }
+}
+
+function macroFetchListItem(id)
+{
+    var req = new XMLHttpRequest;
+    req.open('POST', 'http://192.168.3.1:80/api/getMacro');
+    req.setRequestHeader('content-type', 'application/json');
+    req.onreadystatechange = function(v) {
+        if(v.currentTarget.readyState != 4) return 0;
+        if(v.currentTarget.status != 200) return 0;
+        macroStoreFile(JSON.parse(v.currentTarget.responseText));
+        macroBindRender();
+        macroRender();
+    };
+    req.send(JSON.stringify({id:id}));
 }
 
 function macroLoadById(id, force)

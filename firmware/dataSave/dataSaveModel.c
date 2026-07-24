@@ -23,6 +23,88 @@ static struct saveData {
 
 static lfs_t *lfsHandle;          //文件系统的句柄
 
+#define NET_CONFIG_MAGIC 0x4e455431u
+#define NET_IP_MODE_LEGACY 0
+#define NET_IP_MODE_PRESET_1 1
+#define NET_IP_MODE_PRESET_2 2
+#define NET_IP_MODE_PRESET_3 3
+#define NET_IP_MODE_CUSTOM 4
+
+static struct netSaveData {
+    unsigned int magic;
+    unsigned char mode;
+    unsigned char customIp[4];
+} netSaveDataS = {
+    NET_CONFIG_MAGIC,
+    NET_IP_MODE_LEGACY,
+    {10, 63, 63, 1},
+};
+
+static const unsigned char netPresetIp[][4] = {
+    {192, 168, 3, 1},
+    {10, 63, 27, 1},
+    {172, 23, 63, 1},
+    {192, 168, 231, 1},
+};
+
+static void netSaveSetDefault(void)
+{
+    netSaveDataS.magic = NET_CONFIG_MAGIC;
+    netSaveDataS.mode = NET_IP_MODE_LEGACY;
+    netSaveDataS.customIp[0] = 10;
+    netSaveDataS.customIp[1] = 63;
+    netSaveDataS.customIp[2] = 63;
+    netSaveDataS.customIp[3] = 1;
+}
+
+static void netSaveLimit(void)
+{
+    if(netSaveDataS.magic != NET_CONFIG_MAGIC) netSaveSetDefault();
+    if(netSaveDataS.mode > NET_IP_MODE_CUSTOM) netSaveDataS.mode = NET_IP_MODE_LEGACY;
+    if(netSaveDataS.customIp[0] == 0 || netSaveDataS.customIp[0] == 127 || netSaveDataS.customIp[0] > 223) netSaveDataS.customIp[0] = 10;
+    if(netSaveDataS.customIp[3] == 0 || netSaveDataS.customIp[3] == 255) netSaveDataS.customIp[3] = 1;
+}
+
+static int netSaveOpenConfig(lfs_file_t *file)
+{
+    if(lfsHandle == NULL) return -1;
+    debugStage(0, 22);
+    int err = lfs_file_open(lfsHandle, file, "netConfigData", LFS_O_RDWR | LFS_O_CREAT);
+    if(err < 0) debugEvent("net_open_fail", err);
+    return err;
+}
+
+static int netSaveWriteConfig(lfs_file_t *file)
+{
+    lfs_file_rewind(lfsHandle, file);
+    lfs_ssize_t len = lfs_file_write(lfsHandle, file, &netSaveDataS, sizeof(netSaveDataS));
+    if(len != sizeof(netSaveDataS))
+    {
+        debugEvent("net_write_fail", (int)len);
+        return -1;
+    }
+    return 0;
+}
+
+static void netSaveLoad(void)
+{
+    lfs_file_t file;
+    if(netSaveOpenConfig(&file) < 0)
+    {
+        netSaveSetDefault();
+        return;
+    }
+
+    lfs_ssize_t readLen = lfs_file_read(lfsHandle, &file, &netSaveDataS, sizeof(netSaveDataS));
+    if(readLen != sizeof(netSaveDataS) || netSaveDataS.magic != NET_CONFIG_MAGIC)
+    {
+        netSaveSetDefault();
+        netSaveWriteConfig(&file);
+    }
+    netSaveLimit();
+    lfs_file_close(lfsHandle, &file);
+}
+
 static void dataSaveSetDefault(void)
 {
     saveDataS.updateFlag = UPDATE_FLAG;
@@ -70,6 +152,7 @@ unsigned char dataSaveInit(void)
 	if(err < 0)
     {
         dataSaveSetDefault();
+        netSaveLoad();
         keymapLoad(1);
         return 1;
     }
@@ -82,11 +165,13 @@ unsigned char dataSaveInit(void)
         dataSaveSetDefault();
         
         dataSaveWriteConfig(&lfsConfigData);           //写入文件
+        netSaveLoad();
         lfs_file_close(lfsHandle, &lfsConfigData);                                          //关闭文件
         keymapLoad(1);
         return 0;
     }
     dataSaveLimit();
+    netSaveLoad();
     lfs_file_close(lfsHandle, &lfsConfigData);      
     keymapLoad(0);
     return 0;
@@ -181,6 +266,74 @@ unsigned char dataSaveStatePageFunction(unsigned char v)
     
     dataSaveWriteConfig(&lfsConfigData);           //写入文件
     lfs_file_close(lfsHandle, &lfsConfigData);                                          //关闭文件
+    return 0;
+}
+
+unsigned char dataSaveGetNetIpMode(void)
+{
+    netSaveLimit();
+    return netSaveDataS.mode;
+}
+
+unsigned char dataSaveSetNetIpMode(unsigned char mode)
+{
+    lfs_file_t file;
+    if(mode < NET_IP_MODE_PRESET_1 || mode > NET_IP_MODE_CUSTOM) mode = NET_IP_MODE_PRESET_1;
+    netSaveDataS.mode = mode;
+    netSaveLimit();
+    if(netSaveOpenConfig(&file) < 0) return 1;
+    netSaveWriteConfig(&file);
+    lfs_file_close(lfsHandle, &file);
+    return 0;
+}
+
+unsigned char dataSaveGetNetCustomIp(unsigned char *ip)
+{
+    if(ip == NULL) return 1;
+    netSaveLimit();
+    ip[0] = netSaveDataS.customIp[0];
+    ip[1] = netSaveDataS.customIp[1];
+    ip[2] = netSaveDataS.customIp[2];
+    ip[3] = netSaveDataS.customIp[3];
+    return 0;
+}
+
+unsigned char dataSaveSetNetCustomIp(const unsigned char *ip)
+{
+    lfs_file_t file;
+    if(ip == NULL) return 1;
+    netSaveDataS.customIp[0] = ip[0];
+    netSaveDataS.customIp[1] = ip[1];
+    netSaveDataS.customIp[2] = ip[2];
+    netSaveDataS.customIp[3] = ip[3];
+    netSaveDataS.mode = NET_IP_MODE_CUSTOM;
+    netSaveLimit();
+    if(netSaveOpenConfig(&file) < 0) return 1;
+    netSaveWriteConfig(&file);
+    lfs_file_close(lfsHandle, &file);
+    return 0;
+}
+
+unsigned char dataSaveGetNetIp(unsigned char *ip)
+{
+    if(ip == NULL) return 1;
+    netSaveLimit();
+    if(netSaveDataS.mode == NET_IP_MODE_CUSTOM)
+    {
+        ip[0] = netSaveDataS.customIp[0];
+        ip[1] = netSaveDataS.customIp[1];
+        ip[2] = netSaveDataS.customIp[2];
+        ip[3] = netSaveDataS.customIp[3];
+    }
+    else
+    {
+        unsigned char mode = netSaveDataS.mode;
+        if(mode > NET_IP_MODE_PRESET_3) mode = NET_IP_MODE_LEGACY;
+        ip[0] = netPresetIp[mode][0];
+        ip[1] = netPresetIp[mode][1];
+        ip[2] = netPresetIp[mode][2];
+        ip[3] = netPresetIp[mode][3];
+    }
     return 0;
 }
 

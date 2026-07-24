@@ -35,6 +35,7 @@ void magic63UI(void)
     /* Temporarily disable the standalone GIF playback page. */
     // magic63UIGifPageinit(tabview);
     magic63UIGongDePageinit(tabview);
+    magic63UINetPageinit(tabview);
     magic63UIBootPageinit(tabview);
 
     lv_tabview_set_act(tabview, 0, LV_ANIM_OFF);

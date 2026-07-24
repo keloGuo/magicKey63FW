@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #include "net.h"
 #include "cJSON.h"
@@ -150,32 +151,69 @@ static void macroAddJson(cJSON *array, macro_data_t *macro)
     cJSON_AddItemToArray(array, root);
 }
 
+static int jsonAppend(char *body, size_t cap, size_t *used, const char *fmt, ...)
+{
+    if(body == NULL || used == NULL || *used >= cap) return 0;
+
+    va_list args;
+    va_start(args, fmt);
+    int n = vsnprintf(body + *used, cap - *used, fmt, args);
+    va_end(args);
+
+    if(n < 0 || (size_t)n >= cap - *used)
+    {
+        if(cap > 0) body[cap - 1] = '\0';
+        return 0;
+    }
+    *used += (size_t)n;
+    return 1;
+}
+
 static char *macroListJson(void)
 {
     lfs_dir_t dir;
     struct lfs_info info;
-    macro_data_t macro;
-    cJSON *root = cJSON_CreateObject();
-    cJSON *macros = cJSON_CreateArray();
     lfs_t *fs = fsInit();
+    static char body[1024];
+
+    size_t used = 0;
+    unsigned char first = 1;
+    unsigned char ok = jsonAppend(body, sizeof(body), &used,
+                                  "{\"maxActions\":%u,\"ids\":[",
+                                  (unsigned int)MACRO_MAX_ACTIONS);
 
     if(lfs_dir_open(fs, &dir, "/") >= 0)
     {
-        while(lfs_dir_read(fs, &dir, &info) > 0)
+        while(ok && lfs_dir_read(fs, &dir, &info) > 0)
         {
             if(info.type != LFS_TYPE_REG) continue;
             int id = macroIdFromFileName(info.name);
             if(id < 0) continue;
-            if(macroLoadOne((unsigned int)id, &macro, 0) == 0) macroAddJson(macros, &macro);
+            ok = jsonAppend(body, sizeof(body), &used, "%s%d", first ? "" : ",", id);
+            if(ok) first = 0;
         }
         lfs_dir_close(fs, &dir);
     }
 
-    cJSON_AddNumberToObject(root, "maxActions", MACRO_MAX_ACTIONS);
-    cJSON_AddItemToObject(root, "macros", macros);
-    char *out = cJSON_PrintUnformatted(root);
-    cJSON_Delete(root);
-    return out;
+    if(!ok || !jsonAppend(body, sizeof(body), &used, "],\"macros\":["))
+    {
+        return NULL;
+    }
+    first = 1;
+    if(lfs_dir_open(fs, &dir, "/") >= 0)
+    {
+        while(ok && lfs_dir_read(fs, &dir, &info) > 0)
+        {
+            if(info.type != LFS_TYPE_REG) continue;
+            int id = macroIdFromFileName(info.name);
+            if(id < 0) continue;
+            ok = jsonAppend(body, sizeof(body), &used, "%s{\"id\":%d}", first ? "" : ",", id);
+            if(ok) first = 0;
+        }
+        lfs_dir_close(fs, &dir);
+    }
+    if(!ok || !jsonAppend(body, sizeof(body), &used, "]}")) return NULL;
+    return body;
 }
 
 static char *macroOneJson(macro_data_t *macro)
@@ -394,7 +432,6 @@ unsigned char webListMacro(struct mg_connection *c)
         return 0;
     }
 	mg_http_reply(c, 200, s_json_header, out);
-	free(out);
 	return 1;
 }
 

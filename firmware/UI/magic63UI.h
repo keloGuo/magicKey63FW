@@ -6,6 +6,7 @@ lv_obj_t* magic63UIStatePageinit(lv_obj_t* temp);
 lv_obj_t* magic63UILayerPageinit(lv_obj_t* temp);
 lv_obj_t* magic63UILinghtPageinit(lv_obj_t* temp);
 lv_obj_t* magic63UIRatePageinit(lv_obj_t* temp);
+lv_obj_t* magic63UINetPageinit(lv_obj_t* temp);
 lv_obj_t* magic63UICodexPageinit(lv_obj_t* temp);
 lv_obj_t* magic63UIMacroRecordPageinit(lv_obj_t* temp);
 lv_obj_t* magic63UIMacroPlayPageinit(lv_obj_t* temp);
