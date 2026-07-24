@@ -75,7 +75,7 @@ function webDataHandle(v) {
 
 function webDataRequest(api, data) {
   var xmlHttp = new XMLHttpRequest;
-  var URL = 'http://192.168.3.1:80/api/' + api;
+  var URL = '/api/' + api;
   xmlHttp.open('POST', URL);
   xmlHttp.setRequestHeader('content-type', 'application/json');
   xmlHttp.send(data);

@@ -46,6 +46,23 @@ WINDOWS_DRIVE='E:\' TIMEOUT_SECONDS=120 ./tool/flash_uf2_wsl.sh
 Adjust `WINDOWS_DRIVE` if the `RPI-RP2` bootloader volume uses a different
 drive letter.
 
+## Device Network
+
+The default USB network address is:
+
+```text
+http://10.63.27.1:80
+```
+
+The device UI can switch to alternate IP presets or a custom IP. When the
+device IP is changed, pass the matching URL to tools through `DEVICE_URL` or
+`BOOTLOADER_URL`, for example:
+
+```sh
+DEVICE_URL=http://172.23.63.1:80 python3 tool/upload_html.py
+BOOTLOADER_URL=http://172.23.63.1/api/rebootToUf2 ./tool/flash_uf2_wsl.sh
+```
+
 ## License
 
 This repository uses separate licenses for different parts of the project. See

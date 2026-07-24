@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 UF2_PATH="${UF2_PATH:-$ROOT_DIR/build/firmware.uf2}"
-BOOTLOADER_URL="${BOOTLOADER_URL:-http://192.168.3.1/api/rebootToUf2}"
+BOOTLOADER_URL="${BOOTLOADER_URL:-http://10.63.27.1/api/rebootToUf2}"
 MOUNT_LABEL="${MOUNT_LABEL:-RPI-RP2}"
 WINDOWS_DRIVE="${WINDOWS_DRIVE:-}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-60}"

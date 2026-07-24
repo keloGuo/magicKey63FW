@@ -18,7 +18,7 @@ static lv_obj_t *netSetFieldLabel = NULL;
 static lv_obj_t *netSetTipLabel = NULL;
 
 static unsigned char netEditField = 0;
-static unsigned char netMode = NET_IP_MODE_LEGACY;
+static unsigned char netMode = NET_IP_MODE_PRESET_1;
 static unsigned char netCustomIp[4] = {10, 63, 63, 1};
 static const unsigned char netPresetIp[][4] = {
     {192, 168, 3, 1},
@@ -41,7 +41,7 @@ static const char *netModeName(unsigned char mode)
         case NET_IP_MODE_PRESET_2: return "P2";
         case NET_IP_MODE_PRESET_3: return "P3";
         case NET_IP_MODE_CUSTOM: return "CUS";
-        default: return "OLD";
+        default: return "P1";
     }
 }
 
@@ -58,7 +58,7 @@ static void netGetEditIp(unsigned char *ip)
     else
     {
         unsigned char mode = netMode;
-        if(mode > NET_IP_MODE_PRESET_3) mode = NET_IP_MODE_LEGACY;
+        if(mode < NET_IP_MODE_PRESET_1 || mode > NET_IP_MODE_PRESET_3) mode = NET_IP_MODE_PRESET_1;
         ip[0] = netPresetIp[mode][0];
         ip[1] = netPresetIp[mode][1];
         ip[2] = netPresetIp[mode][2];
@@ -68,7 +68,7 @@ static void netGetEditIp(unsigned char *ip)
 
 static void netRefresh(void)
 {
-    unsigned char ip[4] = {192, 168, 3, 1};
+    unsigned char ip[4] = {10, 63, 27, 1};
     char text[32] = {'\0'};
 
     netGetEditIp(ip);
@@ -108,7 +108,7 @@ static void netLoad(void)
 {
     netMode = dataSaveGetNetIpMode();
     dataSaveGetNetCustomIp(netCustomIp);
-    if(netMode > NET_IP_MODE_CUSTOM) netMode = NET_IP_MODE_LEGACY;
+    if(netMode > NET_IP_MODE_CUSTOM) netMode = NET_IP_MODE_PRESET_1;
     netEditField = 0;
 }
 
@@ -230,7 +230,7 @@ static pageInfo* magic63NetPageShow(lv_obj_t* temp)
     lv_obj_set_style_pad_top(t, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     netHomeValue = lv_label_create(T);
-    lv_label_set_text(netHomeValue, "OLD");
+    lv_label_set_text(netHomeValue, "P1");
     lv_obj_set_size(netHomeValue, 58, 30);
     lv_obj_align(netHomeValue, LV_ALIGN_CENTER, 0, 12);
     lv_obj_set_style_text_color(netHomeValue, lv_color_make(0xff, 0xff, 0xff), 0);
@@ -262,7 +262,7 @@ static void magic63NetPageSet(lv_obj_t* temp, pageInfo* homePage)
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     netSetModeLabel = lv_label_create(T);
-    lv_label_set_text(netSetModeLabel, "OLD");
+    lv_label_set_text(netSetModeLabel, "P1");
     lv_obj_set_size(netSetModeLabel, 60, 26);
     lv_obj_set_pos(netSetModeLabel, 88, 6);
     lv_obj_set_style_text_font(netSetModeLabel, &lv_font_montserrat_24, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -271,7 +271,7 @@ static void magic63NetPageSet(lv_obj_t* temp, pageInfo* homePage)
     lv_obj_set_style_text_align(netSetModeLabel, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     netSetIpLabel = lv_label_create(T);
-    lv_label_set_text(netSetIpLabel, "192.168.3.1");
+    lv_label_set_text(netSetIpLabel, "10.63.27.1");
     lv_obj_set_size(netSetIpLabel, 140, 18);
     lv_obj_set_pos(netSetIpLabel, 10, 34);
     lv_obj_set_style_text_color(netSetIpLabel, lv_color_make(0xff, 0xff, 0xff), 0);

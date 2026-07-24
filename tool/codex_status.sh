@@ -2,7 +2,7 @@
 set -euo pipefail
 
 STATE="${1:-}"
-DEVICE_URL="${DEVICE_URL:-http://192.168.3.1:80}"
+DEVICE_URL="${DEVICE_URL:-http://10.63.27.1:80}"
 
 case "$STATE" in
   notLoaded|idle|active|systemError|working|success|error|waiting) ;;

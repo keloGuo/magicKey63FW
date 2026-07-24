@@ -610,7 +610,7 @@ def main():
     parser.add_argument("--verbose", action="store_true", help="print app-server discovery and raw thread status")
     parser.add_argument(
         "--device-url",
-        default=os.environ.get("DEVICE_URL", "http://192.168.3.1:80"),
+        default=os.environ.get("DEVICE_URL", "http://10.63.27.1:80"),
         help="keyboard device base URL",
     )
     parser.add_argument(

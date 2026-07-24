@@ -489,7 +489,7 @@ var xmlHttp = new XMLHttpRequest;
 /*以下function是请求数据用的*/
 function webDataRequest(api,data) //发送数据
 {
-    var URL = 'http://192.168.3.1:80/api/' + api; 
+    var URL = '/api/' + api; 
     xmlHttp.open('POST', URL);
     xmlHttp.setRequestHeader('content-type', 'application/json');
     xmlHttp.send(data);
@@ -499,7 +499,7 @@ function webDataRequest(api,data) //发送数据
 function deviceReboot()
 {
     var req = new XMLHttpRequest;
-    req.open('POST', 'http://192.168.3.1:80/api/reboot');
+    req.open('POST', '/api/reboot');
     req.setRequestHeader('content-type', 'application/json');
     req.send('{"state":1}');
 }
@@ -574,7 +574,7 @@ var bounceDiagHistory = [];
 function bounceDiagRequest(api, callback)
 {
     var req = new XMLHttpRequest;
-    req.open('POST', 'http://192.168.3.1:80/api/' + api);
+    req.open('POST', '/api/' + api);
     req.setRequestHeader('content-type', 'application/json');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;
@@ -595,7 +595,7 @@ function bounceDiagCancelBeacon()
     if(navigator.sendBeacon)
     {
         var data = new Blob(['{"state":1}'], {type:'application/json'});
-        navigator.sendBeacon('http://192.168.3.1:80/api/bounceDiagCancel', data);
+        navigator.sendBeacon('/api/bounceDiagCancel', data);
     }
 }
 
@@ -857,7 +857,7 @@ function gifUploadSetState(text)
 function gifUploadRequestJson(api, data, callback)
 {
     var req = new XMLHttpRequest;
-    req.open('POST', 'http://192.168.3.1:80/api/' + api);
+    req.open('POST', '/api/' + api);
     req.setRequestHeader('content-type', 'application/json');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;
@@ -878,7 +878,7 @@ function gifUploadRequestChunk(fileObj, start, len, callback)
     var req = new XMLHttpRequest;
     var fd = new FormData();
     fd.append('file', fileObj.slice(start, start + len, "application/octet-stream"));
-    req.open('POST', 'http://192.168.3.1:80/api/updateP');
+    req.open('POST', '/api/updateP');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;
         if(v.currentTarget.status != 200) {
@@ -1510,7 +1510,7 @@ function macroListShow(obj)
 function macroFetchListItem(id)
 {
     var req = new XMLHttpRequest;
-    req.open('POST', 'http://192.168.3.1:80/api/getMacro');
+    req.open('POST', '/api/getMacro');
     req.setRequestHeader('content-type', 'application/json');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;
@@ -1555,7 +1555,7 @@ function macroDeleteCurrent()
     }
 
     var req = new XMLHttpRequest;
-    req.open('POST', 'http://192.168.3.1:80/api/deleteMacro');
+    req.open('POST', '/api/deleteMacro');
     req.setRequestHeader('content-type', 'application/json');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;
@@ -1573,7 +1573,7 @@ function macroGet()
 {
     var req = new XMLHttpRequest;
     var id = parseInt(document.getElementById("macroId").value);
-    req.open('POST', 'http://192.168.3.1:80/api/getMacro');
+    req.open('POST', '/api/getMacro');
     req.setRequestHeader('content-type', 'application/json');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;
@@ -1586,7 +1586,7 @@ function macroGet()
 function macroListGet()
 {
     var req = new XMLHttpRequest;
-    req.open('POST', 'http://192.168.3.1:80/api/listMacro');
+    req.open('POST', '/api/listMacro');
     req.setRequestHeader('content-type', 'application/json');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;
@@ -1605,7 +1605,7 @@ function macroSave()
         mode: parseInt(currentMacro.mode) || 0,
         actions: macroCollectActions()
     };
-    req.open('POST', 'http://192.168.3.1:80/api/setMacro');
+    req.open('POST', '/api/setMacro');
     req.setRequestHeader('content-type', 'application/json');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;
@@ -1655,7 +1655,7 @@ function fsInfoShow(obj)
 function fsInfoGet()
 {
     var req = new XMLHttpRequest;
-    req.open('POST', 'http://192.168.3.1:80/api/fsInfo');
+    req.open('POST', '/api/fsInfo');
     req.setRequestHeader('content-type', 'application/json');
     req.onreadystatechange = function(v) {
         if(v.currentTarget.readyState != 4) return 0;

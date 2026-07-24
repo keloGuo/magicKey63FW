@@ -50,7 +50,7 @@ unsigned char packedFilesWrite(unsigned char *p);
 unsigned char dataSaveGetNetIp(unsigned char *ip);
 unsigned char rndisInit(void)
 {
-  unsigned char ip[4] = {192, 168, 3, 1};
+  unsigned char ip[4] = {10, 63, 27, 1};
   dataSaveGetNetIp(ip);
 
 	mg_mgr_init(&mgr);  // and attach it to the interface

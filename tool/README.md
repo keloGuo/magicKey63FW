@@ -41,7 +41,9 @@ Common commands:
 
 Useful variables:
 
-- `DEVICE_URL`: Device HTTP base URL. Default is `http://192.168.3.1:80`.
+- `DEVICE_URL`: Device HTTP base URL. Default is `http://10.63.27.1:80`.
+- `BOOTLOADER_URL`: Device bootloader API URL used by flashing scripts. Default
+  is `http://10.63.27.1/api/rebootToUf2`.
 - `WINDOWS_DRIVE`: Windows drive letter for the mounted `RPI-RP2` volume, for
   example `E:\`.
 - `TIMEOUT_SECONDS`: Flash script wait timeout.
@@ -49,6 +51,14 @@ Useful variables:
 - `CODEX_BIN`: Codex executable used by `ucodex`.
 
 Run scripts from the repository root unless a script documents otherwise.
+
+If the keyboard network page is set to another IP preset or a custom IP, pass
+the matching URL explicitly:
+
+```sh
+DEVICE_URL=http://172.23.63.1:80 python3 tool/upload_html.py
+BOOTLOADER_URL=http://172.23.63.1/api/rebootToUf2 ./tool/flash_uf2_wsl.sh
+```
 
 ## License
 

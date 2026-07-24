@@ -36,7 +36,7 @@ static struct netSaveData {
     unsigned char customIp[4];
 } netSaveDataS = {
     NET_CONFIG_MAGIC,
-    NET_IP_MODE_LEGACY,
+    NET_IP_MODE_PRESET_1,
     {10, 63, 63, 1},
 };
 
@@ -50,7 +50,7 @@ static const unsigned char netPresetIp[][4] = {
 static void netSaveSetDefault(void)
 {
     netSaveDataS.magic = NET_CONFIG_MAGIC;
-    netSaveDataS.mode = NET_IP_MODE_LEGACY;
+    netSaveDataS.mode = NET_IP_MODE_PRESET_1;
     netSaveDataS.customIp[0] = 10;
     netSaveDataS.customIp[1] = 63;
     netSaveDataS.customIp[2] = 63;
@@ -60,7 +60,7 @@ static void netSaveSetDefault(void)
 static void netSaveLimit(void)
 {
     if(netSaveDataS.magic != NET_CONFIG_MAGIC) netSaveSetDefault();
-    if(netSaveDataS.mode > NET_IP_MODE_CUSTOM) netSaveDataS.mode = NET_IP_MODE_LEGACY;
+    if(netSaveDataS.mode > NET_IP_MODE_CUSTOM) netSaveDataS.mode = NET_IP_MODE_PRESET_1;
     if(netSaveDataS.customIp[0] == 0 || netSaveDataS.customIp[0] == 127 || netSaveDataS.customIp[0] > 223) netSaveDataS.customIp[0] = 10;
     if(netSaveDataS.customIp[3] == 0 || netSaveDataS.customIp[3] == 255) netSaveDataS.customIp[3] = 1;
 }
@@ -328,7 +328,7 @@ unsigned char dataSaveGetNetIp(unsigned char *ip)
     else
     {
         unsigned char mode = netSaveDataS.mode;
-        if(mode > NET_IP_MODE_PRESET_3) mode = NET_IP_MODE_LEGACY;
+        if(mode < NET_IP_MODE_PRESET_1 || mode > NET_IP_MODE_PRESET_3) mode = NET_IP_MODE_PRESET_1;
         ip[0] = netPresetIp[mode][0];
         ip[1] = netPresetIp[mode][1];
         ip[2] = netPresetIp[mode][2];

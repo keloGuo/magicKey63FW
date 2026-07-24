@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $Uf2Path,
 
-    [string] $BootloaderUrl = "http://192.168.3.1/api/rebootToUf2",
+    [string] $BootloaderUrl = "http://10.63.27.1/api/rebootToUf2",
     [string] $MountLabel = "RPI-RP2",
     [string] $WindowsDrive = "",
     [int] $TimeoutSeconds = 60,

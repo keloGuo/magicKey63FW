@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import os
 import time
 import urllib.request
 from pathlib import Path
@@ -61,7 +62,7 @@ def upload_html(device_url, path, timeout):
 def main():
     parser = argparse.ArgumentParser(description="Upload single-line MagicKey index.html to device littlefs.")
     parser.add_argument("html", nargs="?", default=str(DEFAULT_HTML))
-    parser.add_argument("--device-url", default="http://192.168.3.1:80")
+    parser.add_argument("--device-url", default=os.environ.get("DEVICE_URL", "http://10.63.27.1:80"))
     parser.add_argument("--timeout", type=float, default=3.0)
     args = parser.parse_args()
     upload_html(args.device_url, Path(args.html), args.timeout)

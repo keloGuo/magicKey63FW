@@ -52,7 +52,7 @@ Runtime files:
   ~/.ucodex/status_state
 
 Environment:
-  DEVICE_URL=http://192.168.3.1:80
+  DEVICE_URL=http://10.63.27.1:80
   CODEX_STATUS_PORT=4222
   CODEX_BIN=codex
 EOF_README

@@ -39,12 +39,15 @@ After rebuilding the single HTML file, upload it to the device:
 python3 tool/upload_html.py web/webServer/out/index.html
 ```
 
-The default device URL is `http://192.168.3.1`. Override it with the script
-options when needed.
+The default device URL is `http://10.63.27.1`. Override it with
+`--device-url` or `DEVICE_URL` when the keyboard network page is set to another
+IP preset or a custom IP.
 
 ## Notes
 
 - Keep source edits in `index.html`, `index.css`, and `main.js`.
+- The embedded web page uses relative `/api/...` paths, so it follows the
+  current device IP instead of a hard-coded address.
 - Treat `out/index.html` as generated output, but it is tracked so the current
   device page can be reviewed and uploaded without rebuilding.
 - The firmware-side HTTP API handlers are under `firmware/rndis/`.
