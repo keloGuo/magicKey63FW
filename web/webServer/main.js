@@ -444,7 +444,7 @@ function virtualKeyboardKeylistenLayer() //虚拟键盘按键监听
 function virtualKeyboardKeylistenPage()
 {
     var pageIds = ["IDP1","IDP2","IDP3","IDP4","IDP5","IDP6","IDP7","IDP8","IDP9",
-                   "IDQ1","IDQ2","IDQ3","IDQ4","IDQ6","IDQ8"];
+                   "IDQ1","IDQ2","IDQ3","IDQ4","IDQ5","IDQ6","IDQ8"];
     for(var i = 0;i<pageIds.length;i++)
     {
         var that = document.getElementById(pageIds[i]);

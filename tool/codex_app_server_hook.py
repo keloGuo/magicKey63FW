@@ -316,6 +316,146 @@ def read_app_server_state(client, thread_id="", args=None):
     return aggregate_states(states)
 
 
+def _as_number(value, fallback=None):
+    if isinstance(value, (int, float)):
+        return value
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except ValueError:
+            return fallback
+    return fallback
+
+
+def _pick_rate_limit_snapshot(result):
+    if not isinstance(result, dict):
+        return None
+
+    by_limit = result.get("rateLimitsByLimitId")
+    if isinstance(by_limit, dict):
+        snapshot = by_limit.get("codex")
+        if isinstance(snapshot, dict):
+            return snapshot
+
+    snapshot = result.get("rateLimits")
+    return snapshot if isinstance(snapshot, dict) else None
+
+
+def _snapshot_remaining_percent(snapshot):
+    if not isinstance(snapshot, dict):
+        return None
+    for window_name in ("primary", "secondary"):
+        window = snapshot.get(window_name)
+        if not isinstance(window, dict):
+            continue
+        used = _as_number(window.get("usedPercent"))
+        if used is not None:
+            remaining = 100 - used
+            if remaining < 0:
+                remaining = 0
+            if remaining > 100:
+                remaining = 100
+            return int(round(remaining))
+
+    individual = snapshot.get("individualLimit")
+    if isinstance(individual, dict):
+        remaining = _as_number(individual.get("remainingPercent"))
+        if remaining is not None:
+            if remaining < 0:
+                remaining = 0
+            if remaining > 100:
+                remaining = 100
+            return int(round(remaining))
+    return None
+
+
+def _snapshot_reset_date(snapshot):
+    if not isinstance(snapshot, dict):
+        return None
+    reset_values = []
+    for window_name in ("primary", "secondary"):
+        window = snapshot.get(window_name)
+        if not isinstance(window, dict):
+            continue
+        resets_at = _as_number(window.get("resetsAt"))
+        if resets_at is not None and resets_at > 0:
+            reset_values.append(resets_at)
+
+    individual = snapshot.get("individualLimit")
+    if isinstance(individual, dict):
+        resets_at = _as_number(individual.get("resetsAt"))
+        if resets_at is not None and resets_at > 0:
+            reset_values.append(resets_at)
+
+    if not reset_values:
+        return None
+    return time.strftime("%m/%d", time.localtime(min(reset_values)))
+
+
+def _summary_lifetime_tokens(usage_result):
+    if not isinstance(usage_result, dict):
+        return None
+    summary = usage_result.get("summary")
+    if not isinstance(summary, dict):
+        return None
+    tokens = _as_number(summary.get("lifetimeTokens"))
+    if tokens is None:
+        return None
+    if tokens < 0:
+        return 0
+    return int(tokens)
+
+
+def read_app_server_usage(client, args=None):
+    metrics = {}
+
+    try:
+        rate_result = client.request("account/rateLimits/read")
+        snapshot = _pick_rate_limit_snapshot(rate_result)
+        percent = _snapshot_remaining_percent(snapshot)
+        if percent is not None:
+            metrics["usagePercent"] = percent
+        reset_date = _snapshot_reset_date(snapshot)
+        if reset_date is not None:
+            metrics["usageDate"] = reset_date
+        if args is not None:
+            log_debug(args, f"account/rateLimits/read remainingPercent={metrics.get('usagePercent')} resetDate={metrics.get('usageDate')}")
+    except Exception as exc:
+        if args is not None:
+            log_debug(args, f"account/rateLimits/read failed: {exc}")
+
+    try:
+        usage_result = client.request("account/usage/read")
+        tokens = _summary_lifetime_tokens(usage_result)
+        if tokens is not None:
+            metrics["tokenTotal"] = tokens
+        if args is not None:
+            log_debug(args, f"account/usage/read tokenTotal={metrics.get('tokenTotal')}")
+    except Exception as exc:
+        if args is not None:
+            log_debug(args, f"account/usage/read failed: {exc}")
+
+    if metrics and "usageDate" not in metrics:
+        metrics["usageDate"] = time.strftime("%m/%d", time.localtime())
+    return metrics
+
+
+def aggregate_metrics(metrics_list):
+    out = {}
+    percents = [m.get("usagePercent") for m in metrics_list if isinstance(m.get("usagePercent"), int)]
+    tokens = [m.get("tokenTotal") for m in metrics_list if isinstance(m.get("tokenTotal"), int)]
+    if percents:
+        out["usagePercent"] = max(percents)
+    if tokens:
+        out["tokenTotal"] = max(tokens)
+    for metrics in metrics_list:
+        date = metrics.get("usageDate")
+        if isinstance(date, str):
+            out["usageDate"] = date
+            break
+    return out
+
+
 def parse_app_server_urls(values):
     urls = []
     for value in values:
@@ -389,8 +529,16 @@ def write_last_state(path, state):
     path.write_text(state, encoding="utf-8")
 
 
-def notify_device(device_url, state, timeout):
-    body = json.dumps({"state": state}, separators=(",", ":")).encode("utf-8")
+def notify_device(device_url, state, timeout, metrics=None):
+    payload = {"state": state}
+    if isinstance(metrics, dict):
+        if isinstance(metrics.get("usagePercent"), int):
+            payload["usagePercent"] = metrics["usagePercent"]
+        if isinstance(metrics.get("tokenTotal"), int):
+            payload["tokenTotal"] = metrics["tokenTotal"]
+        if isinstance(metrics.get("usageDate"), str):
+            payload["usageDate"] = metrics["usageDate"]
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
     req = urllib.request.Request(
         device_url.rstrip("/") + "/api/codexStatus",
         data=body,
@@ -401,9 +549,9 @@ def notify_device(device_url, state, timeout):
         return resp.read().decode("utf-8", errors="replace")
 
 
-def try_notify_device(args, state):
+def try_notify_device(args, state, metrics=None):
     try:
-        return notify_device(args.device_url, state, args.timeout), None
+        return notify_device(args.device_url, state, args.timeout, metrics), None
     except Exception as exc:
         return "", exc
 
@@ -411,6 +559,15 @@ def try_notify_device(args, state):
 def log_debug(args, message):
     if args.verbose:
         print(message, flush=True)
+
+
+def state_cache_value(state, metrics):
+    if not isinstance(metrics, dict):
+        return state
+    usage = metrics.get("usagePercent")
+    tokens = metrics.get("tokenTotal")
+    date = metrics.get("usageDate")
+    return f"{state}|u={usage if usage is not None else '-'}|t={tokens if tokens is not None else '-'}|d={date if date is not None else '-'}"
 
 
 def main():
@@ -447,6 +604,7 @@ def main():
     )
     parser.add_argument("--watch", action="store_true", help="poll app-server/status-url continuously")
     parser.add_argument("--interval", type=float, default=0.5, help="watch poll interval seconds")
+    parser.add_argument("--usage-interval", type=float, default=5.0, help="seconds between account usage/rate-limit reads")
     parser.add_argument("--force", action="store_true", help="notify even when state did not change")
     parser.add_argument("--dry-run", action="store_true", help="print mapped state without notifying")
     parser.add_argument("--verbose", action="store_true", help="print app-server discovery and raw thread status")
@@ -463,7 +621,7 @@ def main():
         ),
         help="file used to suppress duplicate notifications",
     )
-    parser.add_argument("--timeout", type=float, default=1.0, help="HTTP timeout seconds")
+    parser.add_argument("--timeout", type=float, default=5.0, help="HTTP/App Server timeout seconds")
     args = parser.parse_args()
 
     state_file = Path(args.state_file)
@@ -484,6 +642,8 @@ def main():
         app_clients[url] = connect_app_server(url, args.timeout)
 
     last_discovery = 0.0
+    last_usage_read = 0.0
+    last_metrics = {}
 
     while True:
         now = time.monotonic()
@@ -502,12 +662,15 @@ def main():
 
         if app_clients:
             states = []
+            metrics_list = []
             disconnected = []
             for url, client in app_clients.items():
                 try:
                     state_from_server = read_app_server_state(client, args.thread_id, args)
                     states.append(state_from_server)
                     log_debug(args, f"app-server {url} state={state_from_server}")
+                    if now - last_usage_read >= args.usage_interval:
+                        metrics_list.append(read_app_server_usage(client, args))
                 except Exception as exc:
                     print(f"lost app-server {url}: {exc}", file=sys.stderr, flush=True)
                     disconnected.append(url)
@@ -517,25 +680,29 @@ def main():
                 finally:
                     del app_clients[url]
             state = aggregate_states(states)
+            if metrics_list:
+                last_metrics = aggregate_metrics(metrics_list)
+                last_usage_read = now
         else:
             payload = read_payload(args)
             state = hook_state(payload)
         last_state = read_last_state(state_file)
+        current_state = state_cache_value(state, last_metrics)
 
-        if args.force or state != last_state:
+        if args.force or current_state != last_state:
             if args.dry_run:
-                print(state)
+                print(json.dumps({"state": state, **last_metrics}, separators=(",", ":")))
             else:
-                response, error = try_notify_device(args, state)
+                response, error = try_notify_device(args, state, last_metrics)
                 if error is None:
-                    write_last_state(state_file, state)
-                    print(f"{last_state or '-'} -> {state}: {response}", flush=True)
+                    write_last_state(state_file, current_state)
+                    print(f"{last_state or '-'} -> {current_state}: {response}", flush=True)
                 else:
-                    print(f"{last_state or '-'} -> {state}: notify failed: {error}", file=sys.stderr, flush=True)
+                    print(f"{last_state or '-'} -> {current_state}: notify failed: {error}", file=sys.stderr, flush=True)
         elif not args.watch:
-            print(f"unchanged {state}")
+            print(f"unchanged {current_state}")
         else:
-            log_debug(args, f"unchanged {state}")
+            log_debug(args, f"unchanged {current_state}")
 
         if not args.watch:
             break

@@ -1,89 +1,14 @@
 cmake_minimum_required(VERSION 3.13)
 
-if (NOT DEFINED PICO_SDK_PATH AND NOT DEFINED ENV{PICO_SDK_PATH})
-  set(PICO_SDK_PATH "/mnt/d/kelo/magicKey63/pico-sdk" CACHE PATH "Path to the Raspberry Pi Pico SDK")
+if (NOT DEFINED PICO_SDK_PATH AND DEFINED ENV{PICO_SDK_PATH})
+  set(PICO_SDK_PATH "$ENV{PICO_SDK_PATH}" CACHE PATH "Path to the Raspberry Pi Pico SDK")
 endif()
 
 set(PICO_BOARD pico CACHE STRING "Target board")
-include(zCmakeFile/pico_sdk_import.cmake)
+include(firmware/zCmakeFile/pico_sdk_import.cmake)
 
-project(firmware C CXX ASM )
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)  
-
-add_compile_options(-Wall 
-        -Wno-format          # int != int32_t as far as the compiler is concerned because gcc has int32_t as long int
-        -Wno-unused-function # we have some for the docs that aren't called
-        -Wno-maybe-uninitialized -O3
-         
-        )
-add_compile_definitions(PICO_MALLOC_PANIC=0)
-option(MAGIC63_ENABLE_USB_CDC_DEBUG "Enable USB CDC debug serial interface" OFF)
-option(MAGIC63_ENABLE_UART_STDIO "Enable UART stdio printf output" OFF)
-option(MAGIC63_ENABLE_DEBUG_OUTPUT "Enable formatted debug output" OFF)
-add_compile_definitions(
-  MAGIC63_ENABLE_USB_CDC_DEBUG=$<BOOL:${MAGIC63_ENABLE_USB_CDC_DEBUG}>
-  MAGIC63_ENABLE_UART_STDIO=$<BOOL:${MAGIC63_ENABLE_UART_STDIO}>
-  MAGIC63_ENABLE_DEBUG_OUTPUT=$<BOOL:${MAGIC63_ENABLE_DEBUG_OUTPUT}>
-)
- 
-#add_link_options( -Wl,--section-start=.config_addr=0x10020000)
+project(firmware C CXX ASM)
 
 pico_sdk_init()
 
-include_directories(./macroRecorder)
-
-add_subdirectory(./scratch)
-add_subdirectory(./keyboardScan)
-add_subdirectory(./rndis) 
-add_subdirectory(./usb) 
-add_subdirectory(./st7735) 
-add_subdirectory(./lib/lvgl) 
-add_subdirectory(./lib/littlefs) 
-add_subdirectory(./keymap)
-add_subdirectory(./dataSave)
-add_subdirectory(./apm)
-add_subdirectory(./boot)
-add_subdirectory(./debug)
-add_subdirectory(./macroRecorder)
-add_subdirectory(./UI) 
-add_subdirectory(./lib/cJson) 
-add_subdirectory(./ws2812) 
-
-
-include_directories(./rndis)
-include_directories(./keyboardScan)
-include_directories(./usb) 
-include_directories(./st7735)
-include_directories(./lib/lvgl) 
-include_directories(./lib/littlefs) 
-include_directories(./UI) 
-include_directories(./lib/cJson) 
-include_directories(./lvglPort) 
-include_directories(./ws2812) 
-include_directories(./keymap)
-include_directories(./dataSave)
-include_directories(./apm)
-include_directories(./boot)
-include_directories(./debug)
-include_directories(./macroRecorder)
-
-add_definitions(-DDUAL_CONFIG=1) 
-add_definitions(-DPICO_FLASH_SPI_CLKDIV=2) 
-
-add_executable(firmware 
-  main.c
-  ./lvglPort/lv_port_disp.c
-)
-
-target_include_directories(firmware PUBLIC . ${PICO_SDK_PATH}/lib/tinyusb/lib/networking) 
-target_link_libraries(firmware pico_stdlib pico_multicore rndis userUsb keyboardScan st7735 lvgl UI keymap dataSave apm boot debugModule tinyusb_device hardware_flash littleFs cjson macroRecorder ws2812 scratch)
-target_link_options(firmware PRIVATE
-  -Wl,--wrap=_malloc_r
-  -Wl,--wrap=_calloc_r
-  -Wl,--wrap=_realloc_r
-  -Wl,--wrap=_free_r
-)
-pico_enable_stdio_usb(firmware 0)    # Route stdio
-pico_enable_stdio_uart(firmware ${MAGIC63_ENABLE_UART_STDIO})   # to the UART
-pico_add_extra_outputs(firmware)     # create map/bin/hex file etc.  
+add_subdirectory(firmware)
