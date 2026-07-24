@@ -1,0 +1,10 @@
+MagicKey63 Tooling License
+
+SPDX-License-Identifier: GPL-2.0-only
+
+The MagicKey63 development, upload, flashing, packaging, and status sync tools
+in this directory are licensed under the GNU General Public License version 2
+only.
+
+Third party tools or generated package metadata, if added later, keep their own
+license notices.

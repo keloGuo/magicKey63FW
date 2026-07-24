@@ -48,8 +48,13 @@ drive letter.
 
 ## License
 
-This project is licensed under GPL-2.0-only. See `LICENSE`.
+This repository uses separate licenses for different parts of the project. See
+`LICENSE` for the repository-level summary.
 
-Third party libraries keep their own license notices, including Mongoose
+- Firmware, web UI, and development tools: GPL-2.0-only.
+- Hardware electronics design files: CERN-OHL-S-2.0.
+- Case and mechanical 3D files: CC-BY-SA-4.0.
+
+Third party libraries keep their own license notices. This includes Mongoose
 (`GPL-2.0-only or commercial`), LVGL (`MIT`), littlefs (`BSD-3-Clause`), cJSON
 (`MIT`), TinyUSB (`MIT`), and Pico SDK components.

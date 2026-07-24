@@ -50,3 +50,11 @@ build/firmware.uf2
 
 This keeps existing flashing scripts working after the firmware source was moved
 under `firmware/`.
+
+## License
+
+Firmware source code in this directory is licensed under GPL-2.0-only. See
+`firmware/LICENSE`.
+
+Third party libraries under `firmware/lib/` and other imported files keep their
+own license notices.

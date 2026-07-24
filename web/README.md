@@ -48,3 +48,8 @@ options when needed.
 - Treat `out/index.html` as generated output, but it is tracked so the current
   device page can be reviewed and uploaded without rebuilding.
 - The firmware-side HTTP API handlers are under `firmware/rndis/`.
+
+## License
+
+Web UI source files and generated embedded page output are licensed under
+GPL-2.0-only. See `web/LICENSE`.

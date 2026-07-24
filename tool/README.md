@@ -49,3 +49,8 @@ Useful variables:
 - `CODEX_BIN`: Codex executable used by `ucodex`.
 
 Run scripts from the repository root unless a script documents otherwise.
+
+## License
+
+Development and device utility scripts in this directory are licensed under
+GPL-2.0-only. See `tool/LICENSE`.

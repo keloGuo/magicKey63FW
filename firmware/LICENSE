@@ -1,0 +1,11 @@
+MagicKey63 Firmware License
+
+SPDX-License-Identifier: GPL-2.0-only
+
+The MagicKey63 firmware source code in this directory is licensed under the
+GNU General Public License version 2 only.
+
+Third party libraries under firmware/lib/ and other imported source files keep
+their own license notices. In particular, the bundled Mongoose source is
+licensed as GPL-2.0-only or commercial, so the combined firmware is distributed
+as GPL-2.0-only unless a separate commercial Mongoose license is used.

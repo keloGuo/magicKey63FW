@@ -18,3 +18,8 @@ Preferred source formats:
 - `DXF`: 2D plate or outline export.
 
 When adding generated exports, keep the editable source file as well.
+
+## License
+
+Case and mechanical 3D files in this directory are licensed under
+CC-BY-SA-4.0. See `case_3d/LICENSE`.

@@ -1,0 +1,11 @@
+MagicKey63 Hardware License
+
+SPDX-License-Identifier: CERN-OHL-S-2.0
+
+The MagicKey63 electronics design files in this directory, including schematic,
+PCB layout, BOM, manufacturing exports, and related hardware documentation, are
+licensed under the CERN Open Hardware Licence Version 2 - Strongly Reciprocal.
+
+When redistributing modified hardware design files or manufacturing outputs,
+keep the same license for the covered hardware design and preserve required
+notices.

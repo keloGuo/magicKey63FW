@@ -14,3 +14,8 @@ Suggested contents:
 
 Keyboard enclosure and mechanical 3D files are stored separately in
 `case_3d/`.
+
+## License
+
+Hardware electronics design files in this directory are licensed under
+CERN-OHL-S-2.0. See `hardware/LICENSE`.

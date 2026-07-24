@@ -1,0 +1,8 @@
+MagicKey63 Web UI License
+
+SPDX-License-Identifier: GPL-2.0-only
+
+The MagicKey63 web settings UI source files and generated embedded web page are
+licensed under the GNU General Public License version 2 only.
+
+Third party assets or libraries, if added later, keep their own license notices.
