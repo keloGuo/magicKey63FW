@@ -27,15 +27,15 @@
 #include "tusb.h"
 #include "../magic63_config.h"
 
-/* A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
- * Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
+/*
+ * Use explicit IDs instead of TinyUSB's demo VID/PID scheme.
  *
- * Auto ProductID layout's Bitmap:
- *   [MSB]       NET | VENDOR | MIDI | HID | MSC | CDC          [LSB]
+ * VID 0x1209 belongs to pid.codes for open-source hardware projects. PID
+ * 0x4D63 is used here for MagicKey63 development builds to avoid TinyUSB demo
+ * IDs; register a pid.codes PID before distributing hardware publicly.
  */
-#define _PID_MAP(itf, n)  ( (CFG_TUD_##itf) << (n) )
-#define USB_PID           (0x4000 | _PID_MAP(CDC, 0) | _PID_MAP(MSC, 1) | _PID_MAP(HID, 2) | \
-                           _PID_MAP(MIDI, 3) | _PID_MAP(VENDOR, 4) | _PID_MAP(ECM_RNDIS, 5) | _PID_MAP(NCM, 5) )
+#define USB_VID           0x1209
+#define USB_PID           0x4D63
 
 // String Descriptor Index
 enum
@@ -85,7 +85,7 @@ tusb_desc_device_t const desc_device =
     
     .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
 
-    .idVendor           = 0xCafe,
+    .idVendor           = USB_VID,
     .idProduct          = USB_PID,
     .bcdDevice          = 0x0101,
 
@@ -322,10 +322,10 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 static char const* string_desc_arr [] =
 {
   [STRID_LANGID]       = (const char[]) { 0x09, 0x04 }, // supported language is English (0x0409)
-  [STRID_MANUFACTURER] = "TinyUSB",                     // Manufacturer
-  [STRID_PRODUCT]      = "TinyUSB Device",              // Product
+  [STRID_MANUFACTURER] = "MagicKey63",                  // Manufacturer
+  [STRID_PRODUCT]      = "MagicKey63 Keyboard",         // Product
   [STRID_SERIAL]       = "123456",                      // Serial
-  [STRID_INTERFACE]    = "TinyUSB Network Interface"    // Interface Description
+  [STRID_INTERFACE]    = "MagicKey63 Network Interface" // Interface Description
 
   // STRID_MAC index is handled separately
 };

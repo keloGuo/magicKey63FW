@@ -48,4 +48,8 @@ drive letter.
 
 ## License
 
-This project is licensed under GPL-3.0. See `LICENSE`.
+This project is licensed under GPL-2.0-only. See `LICENSE`.
+
+Third party libraries keep their own license notices, including Mongoose
+(`GPL-2.0-only or commercial`), LVGL (`MIT`), littlefs (`BSD-3-Clause`), cJSON
+(`MIT`), TinyUSB (`MIT`), and Pico SDK components.
