@@ -39,6 +39,7 @@ void scratchInit(void);
 void keyBounceDiagPoll(void);
 void keyBounceDiagCancel(void);
 void keyboardReportSetPaused(unsigned char paused);
+void magic63UsbSerialInit(void);
 
 void bounceDiagUiExitRequest(void)
 {
@@ -90,6 +91,8 @@ int main(void)
 	magic63UI();
 	debugEventText("boot", "ui", 0);
 
+	magic63UsbSerialInit();
+	debugEventText("boot", "usb_serial", 0);
 	tusb_init();
 	debugEventText("boot", "tusb", 0);
 	rndisInit();			

@@ -25,6 +25,7 @@
 // Modified by Cesanta Software
 
 #include "tusb.h"
+#include "pico/unique_id.h"
 #include "../magic63_config.h"
 
 /*
@@ -319,12 +320,19 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 //--------------------------------------------------------------------+
 
 // array of pointer to string descriptors
+static char usb_serial_string[(PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2) + 1] = "0000000000000000";
+
+void magic63UsbSerialInit(void)
+{
+  pico_get_unique_board_id_string(usb_serial_string, sizeof(usb_serial_string));
+}
+
 static char const* string_desc_arr [] =
 {
   [STRID_LANGID]       = (const char[]) { 0x09, 0x04 }, // supported language is English (0x0409)
   [STRID_MANUFACTURER] = "MagicKey63",                  // Manufacturer
   [STRID_PRODUCT]      = "MagicKey63 Keyboard",         // Product
-  [STRID_SERIAL]       = "123456",                      // Serial
+  [STRID_SERIAL]       = usb_serial_string,             // Serial
   [STRID_INTERFACE]    = "MagicKey63 Network Interface" // Interface Description
 
   // STRID_MAC index is handled separately
