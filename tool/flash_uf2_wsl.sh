@@ -49,7 +49,4 @@ if [ "$SKIP_REBOOT" = "1" ]; then
   PS_ARGS+=(-SkipReboot)
 fi
 
-powershell.exe "${PS_ARGS[@]}" && exit 0
-
-printf '[flash] direct powershell.exe failed; retrying through cmd.exe launcher\n' >&2
-exec cmd.exe /C powershell.exe "${PS_ARGS[@]}"
+powershell.exe "${PS_ARGS[@]}"

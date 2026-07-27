@@ -46,7 +46,11 @@ function Test-Uf2Drive {
         return $false
     }
 
-    return Test-Path -LiteralPath (Join-Path $Drive "INFO_UF2.TXT")
+    try {
+        return Test-Path -LiteralPath (Join-Path $Drive "INFO_UF2.TXT")
+    } catch {
+        return $false
+    }
 }
 
 function Find-Uf2Drive {
