@@ -19,6 +19,9 @@ Third party libraries and bundled dependencies keep their own license notices.
 If a third party file contains its own license header or license file, that
 notice takes precedence for that file.
 
+See THIRD_PARTY_LICENSES.md for the third party license summary and release
+redistribution checklist.
+
 This file is a repository-level summary. Use the directory license files and
 the third party notices when redistributing source files, binaries, PCB files,
 or mechanical designs.

@@ -94,3 +94,6 @@ This repository uses separate licenses for different parts of the project. See
 Third party libraries keep their own license notices. This includes Mongoose
 (`GPL-2.0-only or commercial`), LVGL (`MIT`), littlefs (`BSD-3-Clause`), cJSON
 (`MIT`), TinyUSB (`MIT`), and Pico SDK components.
+
+See `THIRD_PARTY_LICENSES.md` for the redistribution checklist and third party
+license summary.
