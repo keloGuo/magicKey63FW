@@ -1,7 +1,7 @@
 //页面加载完成，获取当前层和，当前层数据
 //层按键，设置当前激活层，并返回当前激活层按钮
 
-const MAGIC63_SETTINGS_PAGE_VERSION = "20260727.1";
+const MAGIC63_SETTINGS_PAGE_VERSION = "20260727.2";
 
 window.onload = function () {
     console.log("onload");
@@ -22,6 +22,7 @@ window.onload = function () {
     macroEditorInit();
     bounceDiagInit();
     fsInfoGet();
+    versionInfoGet();
   };
 
 
@@ -1664,6 +1665,33 @@ function fsInfoGet()
         if(v.currentTarget.readyState != 4) return 0;
         if(v.currentTarget.status != 200) return 0;
         fsInfoShow(JSON.parse(v.currentTarget.responseText));
+    };
+    req.send('{"state":1}');
+}
+
+function versionInfoShow(obj)
+{
+    var show = document.getElementById("versionInfo");
+    if(show == null) return 0;
+    var firmwareVersion = obj && obj.firmware ? obj.firmware : "--";
+    var uploadPageVersion = obj && obj.uploadPage ? obj.uploadPage : "--";
+    show.innerHTML = "固件 " + firmwareVersion +
+        "　设置页 " + MAGIC63_SETTINGS_PAGE_VERSION +
+        "　上传页 " + uploadPageVersion;
+}
+
+function versionInfoGet()
+{
+    var req = new XMLHttpRequest;
+    req.open('POST', '/api/versionInfo');
+    req.setRequestHeader('content-type', 'application/json');
+    req.onreadystatechange = function(v) {
+        if(v.currentTarget.readyState != 4) return 0;
+        if(v.currentTarget.status != 200) {
+            versionInfoShow({firmware: "--"});
+            return 0;
+        }
+        versionInfoShow(JSON.parse(v.currentTarget.responseText));
     };
     req.send('{"state":1}');
 }

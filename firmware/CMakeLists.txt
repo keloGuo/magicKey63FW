@@ -1,6 +1,7 @@
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)  
 set(MAGIC63_FIRMWARE_DIR ${CMAKE_CURRENT_LIST_DIR})
+set(MAGIC63_FIRMWARE_VERSION "0.1.0-dev" CACHE STRING "MagicKey63 firmware version")
 
 add_compile_options(-Wall 
         -Wno-format          # int != int32_t as far as the compiler is concerned because gcc has int32_t as long int
@@ -16,6 +17,7 @@ add_compile_definitions(
   MAGIC63_ENABLE_USB_CDC_DEBUG=$<BOOL:${MAGIC63_ENABLE_USB_CDC_DEBUG}>
   MAGIC63_ENABLE_UART_STDIO=$<BOOL:${MAGIC63_ENABLE_UART_STDIO}>
   MAGIC63_ENABLE_DEBUG_OUTPUT=$<BOOL:${MAGIC63_ENABLE_DEBUG_OUTPUT}>
+  MAGIC63_FIRMWARE_VERSION="${MAGIC63_FIRMWARE_VERSION}"
 )
 
 add_library(magic63_sdk_headers INTERFACE)

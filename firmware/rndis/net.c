@@ -13,6 +13,7 @@ unsigned char webRebootToUf2(struct mg_connection *c);
 unsigned char webReboot(struct mg_connection *c);
 unsigned char webCodexStatus(struct mg_http_message *hm,struct mg_connection *c);
 unsigned char webFsInfo(struct mg_connection *c);
+unsigned char webVersionInfo(struct mg_connection *c);
 unsigned char webBounceDiagStart(struct mg_connection *c);
 unsigned char webBounceDiagCancel(struct mg_connection *c);
 unsigned char webBounceDiagStatus(struct mg_connection *c);
@@ -70,6 +71,10 @@ static void fn(struct mg_connection *c, int ev, void *ev_data, void *fn_data) {
 	else if (mg_http_match_uri(hm, "/api/fsInfo"))
 	{
 		webFsInfo(c);
+	}
+	else if (mg_http_match_uri(hm, "/api/versionInfo"))
+	{
+		webVersionInfo(c);
 	}
 	else if (mg_http_match_uri(hm, "/api/bounceDiagStart"))
 	{

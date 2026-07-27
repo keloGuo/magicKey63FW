@@ -10,6 +10,11 @@
 #include "keyboardScan/keyboardScan.h"
 #include "pico/stdlib.h"
 #include "hardware/watchdog.h"
+#include "packed_update_page.h"
+
+#ifndef MAGIC63_FIRMWARE_VERSION
+#define MAGIC63_FIRMWARE_VERSION "unknown"
+#endif
 
 static const char *s_json_header ="Access-Control-Allow-Origin:http://127.0.0.1\r\nAccess-Control-Allow-Headers:*\r\nContent-Type: application/json\r\n""Cache-Control: no-cache\r\n";
 
@@ -301,6 +306,17 @@ unsigned char webFsInfo(struct mg_connection *c)
              usedBlocks);
     mg_http_reply(c, 200, s_json_header, body);
     return used >= 0 ? 1 : 0;
+}
+
+unsigned char webVersionInfo(struct mg_connection *c)
+{
+    char body[160];
+    snprintf(body, sizeof(body),
+             "{\"firmware\":\"%s\",\"uploadPage\":\"%s\"}",
+             MAGIC63_FIRMWARE_VERSION,
+             MAGIC63_UPDATE_PAGE_HTML_VERSION);
+    mg_http_reply(c, 200, s_json_header, body);
+    return 1;
 }
 
 static unsigned char webBounceDiagRunning = 0;

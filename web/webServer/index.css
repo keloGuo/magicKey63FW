@@ -1,4 +1,26 @@
 
+.topInfoBar {
+    width: 888px;
+    margin-top: 24px;
+    margin-right: auto;
+    margin-left: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.topStatusBlock {
+    min-height: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    font-size: 13px;
+    color: #333;
+    line-height: 16px;
+}
+
 #keyboardA {
     width: 585px;
     height: 210px;

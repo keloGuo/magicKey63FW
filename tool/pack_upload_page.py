@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 
@@ -22,6 +23,23 @@ def write_if_changed(path: Path, text: str) -> None:
     path.write_text(text)
 
 
+def c_string(text: str) -> str:
+    return (
+        text.replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )
+
+
+def extract_upload_page_version(html: str) -> str:
+    match = re.search(
+        r"\bMAGIC63_UPLOAD_PAGE_VERSION\s*=\s*['\"]([^'\"]+)['\"]",
+        html,
+    )
+    return match.group(1) if match else "unknown"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Convert the upload HTML page to C array source files."
@@ -36,9 +54,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    data = args.input.read_bytes() + b"\0"
+    html_text = args.input.read_text(encoding="utf-8")
+    upload_page_version = extract_upload_page_version(html_text)
+    data = html_text.encode("utf-8") + b"\0"
     guard = f"{args.symbol.upper()}_H"
     size_macro = f"{args.symbol.upper()}_SIZE"
+    version_macro = f"{args.symbol.upper()}_VERSION"
 
     header = f"""#ifndef {guard}
 #define {guard}
@@ -46,6 +67,7 @@ def main() -> int:
 #include <stddef.h>
 
 #define {size_macro} {len(data)}u
+#define {version_macro} "{c_string(upload_page_version)}"
 
 extern const unsigned char {args.symbol}[{size_macro}];
 
