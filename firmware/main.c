@@ -40,6 +40,7 @@ void keyBounceDiagPoll(void);
 void keyBounceDiagCancel(void);
 void keyboardReportSetPaused(unsigned char paused);
 void magic63UsbSerialInit(void);
+void magic63RndisMacInit(void);
 
 void bounceDiagUiExitRequest(void)
 {
@@ -93,6 +94,8 @@ int main(void)
 
 	magic63UsbSerialInit();
 	debugEventText("boot", "usb_serial", 0);
+	magic63RndisMacInit();
+	debugEventText("boot", "rndis_mac", 0);
 	tusb_init();
 	debugEventText("boot", "tusb", 0);
 	rndisInit();			

@@ -40,4 +40,4 @@ add_definitions(-DDISABLE_ROUTING=1)
 add_definitions(-DHTTP_URL="http://0.0.0.0/")
 
 include_directories(../ ${CMAKE_CURRENT_LIST_DIR}/ ${MAGIC63_PACKED_GENERATED_DIR} ../usb ../lib/cJson ../lib/littlefs)
-target_link_libraries(rndis PUBLIC magic63_sdk_headers cjson littleFs)
+target_link_libraries(rndis PUBLIC magic63_sdk_headers cjson littleFs pico_unique_id)

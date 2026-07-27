@@ -51,6 +51,27 @@ build/firmware.uf2
 This keeps existing flashing scripts working after the firmware source was moved
 under `firmware/`.
 
+## USB Device Identity
+
+RP2040 does not provide a built-in unique chip ID. MagicKey63 uses the external
+QSPI flash unique ID through Pico SDK `pico_unique_id`.
+
+- USB string descriptor serial: the full 8-byte flash unique ID encoded as 16
+  uppercase hexadecimal characters.
+- RNDIS MAC address: generated from the same flash unique ID before USB
+  initialization. The first byte is fixed to `0x02`, which makes the address a
+  locally administered unicast MAC address. The remaining five bytes are mixed
+  from the flash unique ID bytes.
+- TinyUSB RNDIS reports and the Mongoose TCP/IP interface use the same generated
+  MAC address.
+- Device IP address is configurable. When multiple keyboards are connected to
+  the same host at the same time, configure each keyboard to use a different IP
+  preset or custom IP to avoid HTTP/RNDIS address conflicts.
+
+After changing VID, PID, serial, MAC, or IP settings, verify enumeration on the
+target host OS. Windows, macOS, and Linux may cache USB and network interface
+state differently.
+
 ## License
 
 Firmware source code in this directory is licensed under GPL-2.0-only. See

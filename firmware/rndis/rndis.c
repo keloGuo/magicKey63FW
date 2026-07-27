@@ -3,13 +3,37 @@
 
 #include "mongoose.h"
 #include "net.h"
+#include "pico/unique_id.h"
 #include "pico/stdlib.h"
 #include "tusb.h"
+#include <stdint.h>
+#include <string.h>
 
-#define MAC  {2, 0, 1, 2, 3, 0x77}
 static struct mg_tcpip_if *s_ifp;
 
-const uint8_t tud_network_mac_address[6] = {2, 2, 0x84, 0x6A, 0x96, 0};
+const uint8_t tud_network_mac_address[6] __attribute__((section(".data.tud_network_mac_address"))) = {0x02, 0x4d, 0x63, 0x00, 0x00, 0x00};
+
+void magic63RndisMacInit(void)
+{
+  pico_unique_board_id_t id;
+  uint8_t mac[6];
+
+  pico_get_unique_board_id(&id);
+
+  /*
+   * MAC generation rule:
+   * - byte 0 is 0x02, so bit0=0 (unicast) and bit1=1 (locally administered).
+   * - bytes 1..5 are derived from the external flash unique ID.
+   */
+  mac[0] = 0x02;
+  mac[1] = (uint8_t)(id.id[0] ^ id.id[5] ^ 0x4d);
+  mac[2] = (uint8_t)(id.id[1] ^ id.id[6] ^ 0x63);
+  mac[3] = (uint8_t)(id.id[2] ^ id.id[7]);
+  mac[4] = (uint8_t)(id.id[3] ^ id.id[0]);
+  mac[5] = (uint8_t)(id.id[4] ^ id.id[1]);
+
+  memcpy((void *)(uintptr_t)tud_network_mac_address, mac, sizeof(mac));
+}
 
 
 bool tud_network_recv_cb(const uint8_t *buf, uint16_t len) {
@@ -56,10 +80,11 @@ unsigned char rndisInit(void)
 	mg_mgr_init(&mgr);  // and attach it to the interface
 
 	static struct mg_tcpip_driver driver = {.tx = usb_tx, .up = usb_up};
-	static struct mg_tcpip_if mif = {.mac = MAC,
+	static struct mg_tcpip_if mif = {
 					.enable_dhcp_server = true,
 					.driver = &driver,
 					.recv_queue.size = 4096};
+  memcpy(mif.mac, tud_network_mac_address, sizeof(mif.mac));
 
   mif.ip =  mg_htonl(MG_U32(ip[0], ip[1], ip[2], ip[3]));
   mif.mask = mg_htonl(MG_U32(255, 255, 255, 0));   
