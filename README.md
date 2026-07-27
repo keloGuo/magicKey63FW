@@ -35,6 +35,25 @@ The generated UF2 is available at:
 build/firmware.uf2
 ```
 
+For release builds, use the project build script:
+
+```sh
+tool/build_firmware.sh --release --incremental -j 8
+tool/build_firmware.sh --release --clean -j 8
+tool/build_firmware.sh --debug --incremental -j 8
+```
+
+The script records the Pico SDK path and git commit, runs
+`arm-none-eabi-size`, and copies release artifacts to:
+
+```text
+build/release/<BuildType>/firmware.uf2
+build/release/<BuildType>/firmware.elf
+build/release/<BuildType>/firmware.map
+build/release/<BuildType>/firmware.size.txt
+build/release/<BuildType>/build-info.txt
+```
+
 ## Flash
 
 When the device is connected to the Windows host through WSL2, use:

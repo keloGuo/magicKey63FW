@@ -4,8 +4,14 @@ This directory contains development and device utility scripts.
 
 ## Firmware And Web Tools
 
+- `build_firmware.sh`: Configures and builds firmware release/debug artifacts,
+  records Pico SDK version information, runs `arm-none-eabi-size`, and copies
+  UF2/ELF/map outputs under `build/release/<BuildType>/`.
 - `build_single_html.py`: Builds the web settings UI into one compact
   `web/webServer/out/index.html` file.
+- `pack_upload_page.py`: Converts `web/webUpdte/index.html` into generated C
+  array source/header files for the firmware embedded upload page. CMake runs
+  this automatically when the upload page changes.
 - `upload_html.py`: Uploads the generated settings page to the device LittleFS
   through the HTTP update API.
 - `flash_uf2_wsl.sh`: Reboots the RP2040 into UF2 mode and copies
@@ -14,6 +20,7 @@ This directory contains development and device utility scripts.
 Common commands:
 
 ```sh
+tool/build_firmware.sh --release --incremental -j 8
 python3 tool/build_single_html.py
 python3 tool/upload_html.py web/webServer/out/index.html
 WINDOWS_DRIVE='E:\' TIMEOUT_SECONDS=120 ./tool/flash_uf2_wsl.sh
@@ -48,6 +55,10 @@ Useful variables:
   example `E:\`.
 - `TIMEOUT_SECONDS`: Flash script wait timeout.
 - `UF2_PATH`: Override the firmware UF2 path used by `flash_uf2_wsl.sh`.
+- `BUILD_TYPE`: Firmware build type used by `build_firmware.sh`.
+- `JOBS`: Parallel build jobs used by `build_firmware.sh`.
+- `SIZE_TOOL`: Size tool used by `build_firmware.sh`. Default is
+  `arm-none-eabi-size`.
 - `CODEX_BIN`: Codex executable used by `ucodex`.
 
 Run scripts from the repository root unless a script documents otherwise.

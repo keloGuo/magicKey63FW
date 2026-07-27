@@ -4,6 +4,7 @@
 /.codex
 /zbuild
 /build
+/build-*
 __pycache__/
 *.pyc
 /CROWDSUPPLY_TODO.local.md

@@ -15,6 +15,19 @@ cmake --build build
 The root CMake file imports the Pico SDK and then adds this directory with
 `add_subdirectory(firmware)`.
 
+Release and debug builds are wrapped by `tool/build_firmware.sh`:
+
+```sh
+tool/build_firmware.sh --release --incremental -j 8
+tool/build_firmware.sh --release --clean -j 8
+tool/build_firmware.sh --debug --incremental -j 8
+```
+
+The script supports clean and incremental builds, passes
+`CMAKE_BUILD_TYPE=Release` or `Debug`, runs the build in parallel, records the
+Pico SDK git commit, runs `arm-none-eabi-size`, and copies the UF2, ELF, and map
+file into `build/release/<BuildType>/`.
+
 ## Directory Layout
 
 - `main.c`: Firmware entry point and system startup flow.
