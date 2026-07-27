@@ -1,8 +1,11 @@
 //页面加载完成，获取当前层和，当前层数据
 //层按键，设置当前激活层，并返回当前激活层按钮
 
+const MAGIC63_SETTINGS_PAGE_VERSION = "20260727.1";
+
 window.onload = function () {
     console.log("onload");
+    console.log("MagicKey63 settings page version", MAGIC63_SETTINGS_PAGE_VERSION);
 
     keymapGetData(0xff);
 

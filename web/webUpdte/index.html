@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <script type="module">
+const MAGIC63_UPLOAD_PAGE_VERSION = "20260727.1";
 const chunkSize = 1024;
 var uploadFileInputId = "htmlFile";
 var uploadExpectedType = 1;
@@ -192,6 +193,7 @@ function progressFunction(count) {
 
 window.onload = function() {
   console.log("onload");
+  console.log("MagicKey63 upload page version", MAGIC63_UPLOAD_PAGE_VERSION);
   document.querySelector("#updateHtml").addEventListener('click', function() { UpladFile(1); });
   document.querySelector("#cancle").addEventListener('click', cancleUploadFile);
 };
