@@ -30,14 +30,22 @@ set_source_files_properties(${MAGIC63_PACKED_UPDATE_PAGE_C} PROPERTIES GENERATED
 
 add_library(rndis ${DIR_RNDIS_SRCS})
 
-# Mongoose build flags
-add_definitions(-DMG_ENABLE_TCPIP=1)
-add_definitions(-DMG_ENABLE_PACKED_FS=1)
-add_definitions(-DMG_ENABLE_FILE=0)
-add_definitions(-DDISABLE_ROUTING=1)
-
-# Example build options
-add_definitions(-DHTTP_URL="http://0.0.0.0/")
-
-include_directories(../ ${CMAKE_CURRENT_LIST_DIR}/ ${MAGIC63_PACKED_GENERATED_DIR} ../usb ../lib/cJson ../lib/littlefs)
-target_link_libraries(rndis PUBLIC magic63_sdk_headers cjson littleFs pico_unique_id)
+target_include_directories(rndis PUBLIC
+  ${CMAKE_CURRENT_LIST_DIR}
+  ${MAGIC63_PACKED_GENERATED_DIR}
+  ${MAGIC63_FIRMWARE_DIR}
+)
+target_compile_definitions(rndis PRIVATE
+  MG_ENABLE_TCPIP=1
+  MG_ENABLE_PACKED_FS=1
+  MG_ENABLE_FILE=0
+  DISABLE_ROUTING=1
+  HTTP_URL="http://0.0.0.0/"
+)
+target_link_libraries(rndis PUBLIC
+  magic63_tinyusb_headers
+  cjson
+  littleFs
+  keyboardScan
+  pico_unique_id_headers
+)

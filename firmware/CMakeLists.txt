@@ -31,18 +31,22 @@ target_link_libraries(magic63_sdk_headers INTERFACE
   hardware_pio_headers
   hardware_spi_headers
 )
-target_include_directories(magic63_sdk_headers INTERFACE
+
+add_library(magic63_tinyusb_headers INTERFACE)
+target_link_libraries(magic63_tinyusb_headers INTERFACE
+  magic63_sdk_headers
+)
+target_include_directories(magic63_tinyusb_headers INTERFACE
+  ${MAGIC63_FIRMWARE_DIR}/usb
   ${PICO_SDK_PATH}/lib/tinyusb/src
   ${PICO_SDK_PATH}/lib/tinyusb/lib/networking
 )
-target_compile_definitions(magic63_sdk_headers INTERFACE
+target_compile_definitions(magic63_tinyusb_headers INTERFACE
   CFG_TUSB_MCU=OPT_MCU_RP2040
   CFG_TUSB_OS=OPT_OS_PICO
 )
- 
-#add_link_options( -Wl,--section-start=.config_addr=0x10020000)
 
-include_directories(./macroRecorder)
+#add_link_options( -Wl,--section-start=.config_addr=0x10020000)
 
 add_subdirectory(./scratch)
 add_subdirectory(./keyboardScan)
@@ -61,33 +65,19 @@ add_subdirectory(./UI)
 add_subdirectory(./lib/cJson) 
 add_subdirectory(./ws2812) 
 
-
-include_directories(./rndis)
-include_directories(./keyboardScan)
-include_directories(./usb) 
-include_directories(./st7735)
-include_directories(./lib/lvgl) 
-include_directories(./lib/littlefs) 
-include_directories(./UI) 
-include_directories(./lib/cJson) 
-include_directories(./lvglPort) 
-include_directories(./ws2812) 
-include_directories(./keymap)
-include_directories(./dataSave)
-include_directories(./apm)
-include_directories(./boot)
-include_directories(./debug)
-include_directories(./macroRecorder)
-
-add_definitions(-DDUAL_CONFIG=1) 
-add_definitions(-DPICO_FLASH_SPI_CLKDIV=2) 
-
 add_executable(firmware 
   main.c
   ./lvglPort/lv_port_disp.c
 )
 
-target_include_directories(firmware PUBLIC . ${PICO_SDK_PATH}/lib/tinyusb/lib/networking) 
+target_include_directories(firmware PRIVATE
+  .
+  ./lvglPort
+)
+target_compile_definitions(firmware PRIVATE
+  DUAL_CONFIG=1
+  PICO_FLASH_SPI_CLKDIV=2
+)
 target_link_libraries(firmware
   rndis
   userUsb
@@ -105,6 +95,8 @@ target_link_libraries(firmware
   macroRecorder
   ws2812
   scratch
+  magic63_tinyusb_headers
+  pico_unique_id
   pico_stdlib
   pico_multicore
   pico_bootrom
