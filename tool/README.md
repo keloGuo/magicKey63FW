@@ -7,6 +7,9 @@ This directory contains development and device utility scripts.
 - `build_firmware.sh`: Configures and builds firmware release/debug artifacts,
   records Pico SDK version information, runs `arm-none-eabi-size`, and copies
   UF2/ELF/map outputs under `build/release/<BuildType>/`.
+- `check_ci.sh`: Runs the local CI-style checks: whitespace, generated web page,
+  old IP hard-coding, VID/PID release notes, CMake configure, firmware build,
+  and firmware size output.
 - `build_single_html.py`: Builds the web settings UI source files into one
   compact `web/webServer/out/index.html` file. Re-run it after changing
   `web/webServer/index.html`, `web/webServer/index.css`, or
@@ -24,6 +27,7 @@ This directory contains development and device utility scripts.
 Common commands:
 
 ```sh
+tool/check_ci.sh
 tool/build_firmware.sh --release --incremental -j 8
 python3 tool/build_single_html.py
 git diff --exit-code -- web/webServer/out/index.html
@@ -64,6 +68,10 @@ Useful variables:
 - `JOBS`: Parallel build jobs used by `build_firmware.sh`.
 - `SIZE_TOOL`: Size tool used by `build_firmware.sh`. Default is
   `arm-none-eabi-size`.
+- `FORBIDDEN_IP_PATTERN`: Extended regexp used by `check_ci.sh` to detect old
+  hard-coded device IPs. Default is `192\.168\.3\.1`.
+- `STRICT_RELEASE`: Set to `1` to make `check_ci.sh` fail on release blockers
+  such as temporary VID/PID notes.
 - `CODEX_BIN`: Codex executable used by `ucodex`.
 
 Run scripts from the repository root unless a script documents otherwise.
