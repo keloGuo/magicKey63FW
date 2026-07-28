@@ -7,13 +7,17 @@ This directory contains development and device utility scripts.
 - `build_firmware.sh`: Configures and builds firmware release/debug artifacts,
   records Pico SDK version information, runs `arm-none-eabi-size`, and copies
   UF2/ELF/map outputs under `build/release/<BuildType>/`.
-- `build_single_html.py`: Builds the web settings UI into one compact
-  `web/webServer/out/index.html` file.
+- `build_single_html.py`: Builds the web settings UI source files into one
+  compact `web/webServer/out/index.html` file. Re-run it after changing
+  `web/webServer/index.html`, `web/webServer/index.css`, or
+  `web/webServer/main.js`.
 - `pack_upload_page.py`: Converts `web/webUpdte/index.html` into generated C
-  array source/header files for the firmware embedded upload page. CMake runs
-  this automatically when the upload page changes.
+  array source/header files for the firmware embedded upload page. This packed
+  page is the recovery UI served from `/update`. CMake runs this automatically
+  when the upload page changes.
 - `upload_html.py`: Uploads the generated settings page to the device LittleFS
-  through the HTTP update API.
+  through the HTTP update API. The device URL can be supplied with
+  `--device-url` or the `DEVICE_URL` environment variable.
 - `flash_uf2_wsl.sh`: Reboots the RP2040 into UF2 mode and copies
   `build/firmware.uf2` to the Windows `RPI-RP2` drive from WSL2.
 
@@ -22,6 +26,7 @@ Common commands:
 ```sh
 tool/build_firmware.sh --release --incremental -j 8
 python3 tool/build_single_html.py
+git diff --exit-code -- web/webServer/out/index.html
 python3 tool/upload_html.py web/webServer/out/index.html
 WINDOWS_DRIVE='E:\' TIMEOUT_SECONDS=120 ./tool/flash_uf2_wsl.sh
 ```
@@ -70,6 +75,23 @@ the matching URL explicitly:
 DEVICE_URL=http://172.23.63.1:80 python3 tool/upload_html.py
 BOOTLOADER_URL=http://172.23.63.1/api/rebootToUf2 ./tool/flash_uf2_wsl.sh
 ```
+
+## Web Update Recovery
+
+The main settings page is uploaded to LittleFS as `index.html`. The smaller
+`web/webUpdte/index.html` page is embedded in the firmware and is served from
+`/update`, so it remains available even when the LittleFS settings page needs to
+be replaced.
+
+Recovery workflow:
+
+```sh
+python3 tool/build_single_html.py
+DEVICE_URL=http://<device-ip>:80 python3 tool/upload_html.py web/webServer/out/index.html
+```
+
+If the browser cannot load the main page, open `http://<device-ip>/update` and
+use the packed update page to restore the LittleFS page.
 
 ## License
 
