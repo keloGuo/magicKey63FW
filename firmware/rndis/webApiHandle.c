@@ -52,6 +52,7 @@ unsigned char webFileUpdatePpakgStart(struct mg_http_message *hm,struct mg_conne
 lfs_t * fsInit(void);
 void debugStage(unsigned char core, unsigned int stage);
 void debugEvent(const char *tag, int value);
+void debugEventText(const char *tag, const char *text, int value);
 void keyboardReportSetPaused(unsigned char paused);
 void magic63UIBounceDiagPageEnter(void);
 void magic63UIBounceDiagPageLeave(void);
@@ -639,7 +640,7 @@ unsigned char getKeyboardMap(struct mg_http_message *hm,struct mg_connection *c)
 		return 0;
 	}
     unsigned char tempLayer = ((tempJsonlayer->valueint > 0) && (tempJsonlayer->valueint < 5)) ? tempJsonlayer->valueint : getFlashLayerInfo();	
-    printf("getKeyboardMap req=%d active=%d\r\n", tempJsonlayer->valueint, tempLayer);
+    debugEvent("web_keymap_layer", ((tempJsonlayer->valueint & 0xff) << 8) | tempLayer);
 
     if(tempLayer == tempJsonlayer->valueint)  layerNumberSet(tempJsonlayer->valueint);
 
@@ -655,7 +656,7 @@ unsigned char setKeyValue(struct mg_http_message *hm,struct mg_connection *c)
 { 
     const char *p = hm->body.ptr;
 	cJSON *tempJson = cJSON_Parse((const char *)(p));
-	printf("webDataProcess = %s \r\n",p);
+	debugEventText("web", "set_key", (int)hm->body.len);
 
 	if(tempJson == NULL) 
     {
@@ -672,7 +673,7 @@ unsigned char setKeyValue(struct mg_http_message *hm,struct mg_connection *c)
 		return 0;
 	}
 
-	printf("getFlashLayerInfo() = %d \r\n",getFlashLayerInfo());
+	debugEvent("web_flash_layer", getFlashLayerInfo());
 
 	unsigned short *q = getKeyMap(getFlashLayerInfo());
 	q[tempJsonid->valueint - 1] = tempJsonKeyValue->valueint;
@@ -807,7 +808,9 @@ unsigned char webFileUpdatePpakgEnter(struct mg_http_message *hm,struct mg_conne
         checkSumTemp += webFileUpdatePbuff[i];
     }
     
-    printf("len = %d checkSumTemp = %d  tempJsoncheckSum = %d over = %d len = %d\r\n",tempJsonLen->valueint,checkSumTemp,tempJsoncheckSum->valueint,tempJsonOver->valueint,tempJsonLen->valueint);
+    debugEvent("web_update_len", tempJsonLen->valueint);
+    debugEvent("web_update_sum", (int)checkSumTemp);
+    debugEvent("web_update_expect", tempJsoncheckSum->valueint);
 
     if(checkSumTemp == tempJsoncheckSum->valueint)
     {
@@ -825,7 +828,7 @@ unsigned char webFileUpdatePpakgEnter(struct mg_http_message *hm,struct mg_conne
         return 0;
     }
 
-    printf("webFileUpdatePpakgEnter check erro\n");
+    debugEvent("web_update_checksum_fail", (int)checkSumTemp);
     cJSON_Delete(tempJson);
     mg_http_reply(c, 200, s_json_header, "{\"state\":\"fail\"}");
     return 0;
@@ -834,7 +837,7 @@ unsigned char webFileUpdatePpakgStart(struct mg_http_message *hm,struct mg_conne
 {
     const char *p = hm->body.ptr;
 	cJSON *tempJson = cJSON_Parse((const char *)(p));
-	printf("webFileUpdatePpakgStart = %s \r\n",p);
+	debugEventText("web", "update_start", (int)hm->body.len);
 
 	if(tempJson == NULL) 
     {
@@ -861,7 +864,8 @@ unsigned char webFileUpdatePpakgStart(struct mg_http_message *hm,struct mg_conne
 
     fileType = tempJsonType->valueint;
 
-    printf("len = %d tempJsonSize = %d  tempJsonType = %d\r\n",tempJsonSize->valueint,tempJsonType->valueint);
+    debugEvent("web_update_size", tempJsonSize->valueint);
+    debugEvent("web_update_type", tempJsonType->valueint);
     cJSON_Delete(tempJson);
     mg_http_reply(c, 200, s_json_header, "{\"success\":\"ok\"}");
     return 0; 

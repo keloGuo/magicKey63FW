@@ -35,6 +35,7 @@ void debugHeartbeat(unsigned char core);
 void debugMallinfoSample(unsigned int arena, unsigned int ordblks, unsigned int uordblks, unsigned int fordblks, unsigned int keepcost);
 void debugEvent(const char *tag, int value);
 void debugEventText(const char *tag, const char *text, int value);
+void debugPrintf(const char* format, ...);
 void scratchInit(void);
 void keyBounceDiagPoll(void);
 void keyBounceDiagCancel(void);
@@ -52,7 +53,7 @@ void bounceDiagUiExitRequest(void)
 unsigned char sysClockInit(void)
 {
 	set_sys_clock_khz(PLL_SYS_KHZ, true);
-	printf("clock_get_hz = %d \r\n",clock_get_hz(clk_sys));
+	debugPrintf("clock_get_hz = %d \r\n", clock_get_hz(clk_sys));
 	return 0;
 }
 
@@ -74,8 +75,8 @@ int main(void)
 	scratchInit();
 	debugEventText("boot", "scratch_init", 0);
 	multicore_lockout_victim_init();
-	printf("cpu lvgl id %d \r\n",*((unsigned int *)(0xd0000000)));
-	printf("clock_get_hz = %d \r\n",clock_get_hz(clk_sys));
+	debugPrintf("cpu lvgl id %d \r\n", *((unsigned int *)(0xd0000000)));
+	debugPrintf("clock_get_hz = %d \r\n", clock_get_hz(clk_sys));
 
 	multicore_launch_core1(core1_main);
 	debugEventText("boot", "core1_launch", 0);

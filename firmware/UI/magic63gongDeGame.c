@@ -6,6 +6,8 @@
 #include "pageChangeLogic.h"
 extern const lv_img_dsc_t sbmy ;
 void lv_gif_pause(lv_obj_t * obj);
+void debugEvent(const char *tag, int value);
+void debugEventText(const char *tag, const char *text, int value);
 
 
 static unsigned char gongDeing = 0;     //当前是否在功德界面
@@ -79,7 +81,7 @@ static int PageGongDeGanmeCallback(int t,int inOrOut,int k)
 {
     if(inOrOut == 1)
     {
-        printf("in  Page gongde game \n");
+        debugEventText("ui", "gongde_in", 0);
         gongDeing = 1;
         lv_arc_set_value(gongDeBar, gongDeCount); //更新进度条
         char temp[5] = {'\0','\0','\0','\0','\0'};
@@ -205,7 +207,7 @@ static pageInfo* magic63GongDePageSet(lv_obj_t* temp,pageInfo* homePage)
 
 void gongDeGifPlayDoneOver_cb(lv_event_t * event)						//事件回调函数
 {
-	printf("img my_event_cb %d\n",event->code);
+	debugEvent("gongde_gif_ready", (int)event->code);
     if(gongDeGif != NULL) lv_gif_pause(gongDeGif);
     gongDeBusy = 0;
 }

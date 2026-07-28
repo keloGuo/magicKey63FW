@@ -6,6 +6,8 @@
 #include "pageChangeLogic.h"
 #include "pico/bootrom.h"
 
+void debugEventText(const char *tag, const char *text, int value);
+
 int goTOBootMode(int t,int inOrOut,int k)
 {
     //(void) t;
@@ -13,7 +15,7 @@ int goTOBootMode(int t,int inOrOut,int k)
     // bootMode();
     if(t!=2) return 0;
     reset_usb_boot(0, 0);
-    printf("goTOBootMode \r\n");
+    debugEventText("boot", "reset_usb_boot_ui", 0);
     return 1;
 }
 

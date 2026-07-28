@@ -49,6 +49,7 @@ static void cdc_debug_out_chars(const char *buf, int len);
 static void cdc_debug_out_flush(void);
 static int cdc_debug_in_chars(char *buf, int len);
 #endif
+static int cdc_vprintf(const char* format, va_list va);
 
 extern char __StackLimit;
 extern void *sbrk(ptrdiff_t incr);
@@ -591,6 +592,18 @@ static int cdc_vprintf(const char* format, va_list va)
 	(void)format;
 	(void)va;
 	return 0;
+#endif
+}
+
+void debugPrintf(const char* format, ...)
+{
+#if MAGIC63_ENABLE_DEBUG_OUTPUT
+    va_list va;
+    va_start(va, format);
+    cdc_vprintf(format, va);
+    va_end(va);
+#else
+	(void)format;
 #endif
 }
 

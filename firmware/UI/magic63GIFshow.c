@@ -8,6 +8,8 @@
 extern const lv_img_dsc_t HCR;
 
 void userPrintf(const char* format, ...);
+void debugEvent(const char *tag, int value);
+void debugEventText(const char *tag, const char *text, int value);
 void lv_gif_pause(lv_obj_t * obj);
 void lv_gif_resume(lv_obj_t * obj);
 
@@ -49,7 +51,7 @@ int PageGifChangeCallback(int t,int inOrOut,int k) //0,没有按键，1是短按
 {
     if(inOrOut == 1)
     {
-        printf("in  Page Gif \n");
+        debugEventText("ui", "gif_in", 0);
         if(gifCreate() != 0) return 0;
         gifPlaying = 1;
         lv_gif_resume(img);
@@ -57,7 +59,7 @@ int PageGifChangeCallback(int t,int inOrOut,int k) //0,没有按键，1是短按
     }
     else if(inOrOut == -1)
     {
-         printf("out  Page Gif \n");
+         debugEventText("ui", "gif_out", 0);
          if(img != NULL) lv_gif_pause(img);
          gifDestroy();
          gifPlaying = 0;
@@ -155,7 +157,7 @@ pageInfo* magic63GifPlayPageSet(lv_obj_t* temp,pageInfo* homePage)
 
 void GifPlayDoneOver_cb(lv_event_t * event)						//事件回调函数
 {
-	printf("img GifPlayDoneOver_cb %d\n",event->code);
+	debugEvent("gif_ready", (int)event->code);
     PlayState = 0;
 }
 

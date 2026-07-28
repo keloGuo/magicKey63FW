@@ -9,11 +9,12 @@
 
 
 unsigned short *getDataBuff(void);
+void debugEventText(const char *tag, const char *text, int value);
 
 int goTOBootModeX(void)
 {
     reset_usb_boot(0, 0);
-    printf("goTOBootMode \r\n");
+    debugEventText("boot", "reset_usb_boot", 0);
     return 0;
 }
 

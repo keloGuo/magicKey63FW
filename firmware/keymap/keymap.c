@@ -89,6 +89,7 @@ unsigned short getKeymapByXY(unsigned char x,unsigned char y)
 }  
 unsigned char updateLayerTempNumber(unsigned char data);
 void userPrintf(const char* format, ...);
+void debugPrintf(const char* format, ...);
 
 unsigned char layerChangeKeyHandle(unsigned char k,unsigned char layer)
 {
@@ -170,7 +171,7 @@ unsigned char reportHid(void)
 {
     for(int i = 0; i < 79; i++)
     {
-        printf("%d %d",reportBuff[i*2],reportBuff[i*2+1]);
+        debugPrintf("%d %d", reportBuff[i*2], reportBuff[i*2+1]);
     }
     return 0;
 }

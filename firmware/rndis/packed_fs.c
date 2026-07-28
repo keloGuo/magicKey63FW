@@ -5,6 +5,8 @@
 
 #include "packed_update_page.h"
 
+void debugPrintf(const char* format, ...);
+
 static struct packed_file {
   const char *name;
   const unsigned char *data;
@@ -20,7 +22,7 @@ const unsigned char path[] = "/web_root/index/index.html";
 
 unsigned char packedFilesWrite(unsigned char *p)
 {
-  printf("strlen((char *)p) = %d \n", strlen((char *)p));
+  debugPrintf("strlen((char *)p) = %d \n", strlen((char *)p));
   if(*p != 0xff)
   {
     packed_files[1].name = (const char *)path;

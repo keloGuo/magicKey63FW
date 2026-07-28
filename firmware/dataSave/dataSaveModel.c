@@ -5,6 +5,7 @@ unsigned char keymapLoad(unsigned char init);
 lfs_t * fsInit(void);
 void debugStage(unsigned char core, unsigned int stage);
 void debugEvent(const char *tag, int value);
+void debugPrintf(const char* format, ...);
 //不同版本之间如果数据结构发生变化，就修改这个值，初始化的时候比对，不一样就重新恢复默认值
 #define UPDATE_FLAG 0x03
 static struct saveData {
@@ -158,7 +159,7 @@ unsigned char dataSaveInit(void)
     }
 	lfs_ssize_t readLen = lfs_file_read(lfsHandle, &lfsConfigData, &saveDataS, sizeof(saveDataS));           //读文件
 
-    printf("dataSaveInit %d\r\n",saveDataS.updateFlag);
+    debugPrintf("dataSaveInit %d\r\n", saveDataS.updateFlag);
 
     if(readLen != sizeof(saveDataS) || saveDataS.updateFlag != UPDATE_FLAG)                                             //版本标志不一样，就恢复默认值
     {

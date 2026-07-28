@@ -42,6 +42,7 @@ void ws2812MacroPlayKey(unsigned char ledIndex, unsigned char pressed);
 void debugStage(unsigned char core, unsigned int stage);
 void debugEvent(const char *tag, int value);
 void debugEventText(const char *tag, const char *text, int value);
+void debugPrintf(const char* format, ...);
 void pageJumpRequest(unsigned char index);
 static unsigned char macroLedByXY(unsigned char x, unsigned char y);
 
@@ -325,7 +326,7 @@ static unsigned char macroKeyboardOutputActive(void)
 unsigned char tempFlag = 0;
 void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize)
 {
-    printf("itf %d ,report_id %d report_type %d , bufferlen = %d \n",itf,report_id,report_type,bufsize);
+    debugPrintf("itf %d ,report_id %d report_type %d , bufferlen = %d \n", itf, report_id, report_type, bufsize);
     unsigned char __not_in_flash_func(updateVirtuallyLed)(unsigned char data);
   	if(report_id == 0 && report_type == 2) updateVirtuallyLed(buffer[0]);
     tempFlag = 1;
