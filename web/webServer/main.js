@@ -1675,7 +1675,11 @@ function versionInfoShow(obj)
     if(show == null) return 0;
     var firmwareVersion = obj && obj.firmware ? obj.firmware : "--";
     var uploadPageVersion = obj && obj.uploadPage ? obj.uploadPage : "--";
+    var configVersion = obj && obj.configVersion !== undefined ? obj.configVersion : "--";
+    var usbBcdDevice = obj && obj.usbBcdDevice ? obj.usbBcdDevice : "--";
     show.innerHTML = "固件 " + firmwareVersion +
+        "　配置 " + configVersion +
+        "　USB " + usbBcdDevice +
         "　设置页 " + MAGIC63_SETTINGS_PAGE_VERSION +
         "　上传页 " + uploadPageVersion;
 }

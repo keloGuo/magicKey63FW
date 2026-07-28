@@ -85,6 +85,32 @@ After changing VID, PID, serial, MAC, or IP settings, verify enumeration on the
 target host OS. Windows, macOS, and Linux may cache USB and network interface
 state differently.
 
+## Versioning
+
+- Firmware version string: set by `MAGIC63_FIRMWARE_VERSION` in
+  `firmware/CMakeLists.txt`. The default development value is `0.1.0-dev`.
+- USB `bcdDevice`: defined as `MAGIC63_USB_BCD_DEVICE` in
+  `firmware/magic63_version.h`. It uses packed BCD `0xMMmm`, where `MM` is the
+  public major version and `mm` is the public minor version. Development builds
+  before the first public release use `0x0100`.
+- Persistent configuration schema: defined as `MAGIC63_CONFIG_VERSION` in
+  `firmware/magic63_version.h`.
+- Settings web page version: defined by `MAGIC63_SETTINGS_PAGE_VERSION` in
+  `web/webServer/main.js`.
+- Packed upload page version: defined by `MAGIC63_UPLOAD_PAGE_VERSION` in
+  `web/webUpdte/index.html` and embedded into firmware by
+  `tool/pack_upload_page.py`.
+
+The `/api/versionInfo` endpoint exposes the firmware version, configuration
+schema version, USB `bcdDevice`, and packed upload page version. The settings
+web page combines that response with its own page version.
+
+When the main persistent configuration structure changes, increment
+`MAGIC63_CONFIG_VERSION`. The current migration policy is conservative: if the
+stored structure size or schema version does not match, firmware restores the
+main configuration and keymap to defaults. Network configuration is stored
+separately as `netConfigData` and is validated by its own magic value.
+
 ## License
 
 Firmware source code in this directory is licensed under GPL-2.0-only. See

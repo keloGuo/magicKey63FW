@@ -11,6 +11,7 @@
 #include "pico/stdlib.h"
 #include "hardware/watchdog.h"
 #include "packed_update_page.h"
+#include "magic63_version.h"
 
 #ifndef MAGIC63_FIRMWARE_VERSION
 #define MAGIC63_FIRMWARE_VERSION "unknown"
@@ -311,10 +312,12 @@ unsigned char webFsInfo(struct mg_connection *c)
 
 unsigned char webVersionInfo(struct mg_connection *c)
 {
-    char body[160];
+    char body[224];
     snprintf(body, sizeof(body),
-             "{\"firmware\":\"%s\",\"uploadPage\":\"%s\"}",
+             "{\"firmware\":\"%s\",\"configVersion\":%u,\"usbBcdDevice\":\"0x%04X\",\"uploadPage\":\"%s\"}",
              MAGIC63_FIRMWARE_VERSION,
+             MAGIC63_CONFIG_VERSION,
+             MAGIC63_USB_BCD_DEVICE,
              MAGIC63_UPDATE_PAGE_HTML_VERSION);
     mg_http_reply(c, 200, s_json_header, body);
     return 1;

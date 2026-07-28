@@ -1,4 +1,5 @@
 #include "lfs.h"
+#include "../magic63_version.h"
 
 extern unsigned short  *keymapList[]; 
 unsigned char keymapLoad(unsigned char init);
@@ -6,8 +7,6 @@ lfs_t * fsInit(void);
 void debugStage(unsigned char core, unsigned int stage);
 void debugEvent(const char *tag, int value);
 void debugPrintf(const char* format, ...);
-//不同版本之间如果数据结构发生变化，就修改这个值，初始化的时候比对，不一样就重新恢复默认值
-#define UPDATE_FLAG 0x03
 static struct saveData {
     unsigned int updateFlag;
     unsigned char activeLayer;
@@ -15,7 +14,7 @@ static struct saveData {
     unsigned char statePageFunction;
     unsigned char backLight;
 } saveDataS = {
-    0x01,         //版本识别
+    MAGIC63_CONFIG_VERSION, //配置结构版本
     0x01,         //默认第一层，
     0x01,         //默认回报间隔1ms\1000hz
     0x02,         //默认第一个功能，显示当前的回报率，应为其他功能还没有做
@@ -108,7 +107,7 @@ static void netSaveLoad(void)
 
 static void dataSaveSetDefault(void)
 {
-    saveDataS.updateFlag = UPDATE_FLAG;
+    saveDataS.updateFlag = MAGIC63_CONFIG_VERSION;
     saveDataS.activeLayer = 1;
     saveDataS.rate = 1;
     saveDataS.statePageFunction = 2;
@@ -161,7 +160,7 @@ unsigned char dataSaveInit(void)
 
     debugPrintf("dataSaveInit %d\r\n", saveDataS.updateFlag);
 
-    if(readLen != sizeof(saveDataS) || saveDataS.updateFlag != UPDATE_FLAG)                                             //版本标志不一样，就恢复默认值
+    if(readLen != sizeof(saveDataS) || saveDataS.updateFlag != MAGIC63_CONFIG_VERSION)                                             //配置结构版本不一致就恢复默认值
     {
         dataSaveSetDefault();
         

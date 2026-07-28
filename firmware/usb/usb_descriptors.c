@@ -27,6 +27,7 @@
 #include "tusb.h"
 #include "pico/unique_id.h"
 #include "../magic63_config.h"
+#include "../magic63_version.h"
 
 /*
  * Use explicit IDs instead of TinyUSB's demo VID/PID scheme.
@@ -88,7 +89,7 @@ tusb_desc_device_t const desc_device =
 
     .idVendor           = USB_VID,
     .idProduct          = USB_PID,
-    .bcdDevice          = 0x0101,
+    .bcdDevice          = MAGIC63_USB_BCD_DEVICE,
 
     .iManufacturer      = STRID_MANUFACTURER,
     .iProduct           = STRID_PRODUCT,
