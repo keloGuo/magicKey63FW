@@ -65,9 +65,9 @@ function virtualkeyBoardKeyHandle1(v)   //虚拟键盘功能键被选中
      
     
 
-    if(numID == 71) activationKeyId = 'keyId'+ (79); 
-    else if(numID == 79) activationKeyId = 'keyId'+ (70); 
-    else if(numID == 70) activationKeyId = 'keyId'+ (71); 
+    if(numID == 70) activationKeyId = 'keyId'+ (79); 
+    else if(numID == 79) activationKeyId = 'keyId'+ (71); 
+    else if(numID == 71) activationKeyId = 'keyId'+ (70); 
     else
     {
         for(var i = 1;;i++)
@@ -111,9 +111,9 @@ function virtualkeyBoardKeyHandle2(v) //虚拟键盘普通按键被被选中
 
     document.getElementById(activationKeyId).innerHTML = document.getElementById(v.target.id).innerHTML;
     document.getElementById(activationKeyId).style.background = "#ffffff";
-    if(numID == 71) activationKeyId = 'keyId'+ (79); 
-    else if(numID == 79) activationKeyId = 'keyId'+ (70); 
-    else if(numID == 70) activationKeyId = 'keyId'+ (71); 
+    if(numID == 70) activationKeyId = 'keyId'+ (79); 
+    else if(numID == 79) activationKeyId = 'keyId'+ (71); 
+    else if(numID == 71) activationKeyId = 'keyId'+ (70); 
     else
     {
         for(var i = 1;;i++)
@@ -161,9 +161,9 @@ function virtualkeyBoardKeyHandleMedia(v) //虚拟键盘普通按键被被选中
     document.getElementById(activationKeyId).innerHTML =v.target.getAttribute("name");
     document.getElementById(activationKeyId).style.background = "#ffffff";
     
-    if(numID == 71) activationKeyId = 'keyId'+ (79); 
-    else if(numID == 79) activationKeyId = 'keyId'+ (70); 
-    else if(numID == 70) activationKeyId = 'keyId'+ (71); 
+    if(numID == 70) activationKeyId = 'keyId'+ (79); 
+    else if(numID == 79) activationKeyId = 'keyId'+ (71); 
+    else if(numID == 71) activationKeyId = 'keyId'+ (70); 
     else
     {
         for(var i = 1;;i++)
@@ -207,9 +207,9 @@ function virtualkeyBoardKeyHandleMouse(v) //虚拟键盘普通按键被被选中
 
     document.getElementById(activationKeyId).innerHTML =v.target.getAttribute("name");
     document.getElementById(activationKeyId).style.background = "#ffffff";
-    if(numID == 71) activationKeyId = 'keyId'+ (79); 
-    else if(numID == 79) activationKeyId = 'keyId'+ (70); 
-    else if(numID == 70) activationKeyId = 'keyId'+ (71); 
+    if(numID == 70) activationKeyId = 'keyId'+ (79); 
+    else if(numID == 79) activationKeyId = 'keyId'+ (71); 
+    else if(numID == 71) activationKeyId = 'keyId'+ (70); 
     else
     {  
         for(var i = 1;;i++)
@@ -249,9 +249,9 @@ function virtualkeyBoardKeyHandleLayer(v) //虚拟键盘普通按键被被选中
 
     document.getElementById(activationKeyId).innerHTML =v.target.getAttribute("name");
     document.getElementById(activationKeyId).style.background = "#ffffff";
-    if(numID == 71) activationKeyId = 'keyId'+ (79); 
-    else if(numID == 79) activationKeyId = 'keyId'+ (70); 
-    else if(numID == 70) activationKeyId = 'keyId'+ (71); 
+    if(numID == 70) activationKeyId = 'keyId'+ (79); 
+    else if(numID == 79) activationKeyId = 'keyId'+ (71); 
+    else if(numID == 71) activationKeyId = 'keyId'+ (70); 
     else
     {  
         for(var i = 1;;i++)
@@ -290,9 +290,9 @@ function virtualkeyBoardKeyHandlePage(v)
 
     document.getElementById(activationKeyId).innerHTML = v.target.getAttribute("name");
     document.getElementById(activationKeyId).style.background = "#ffffff";
-    if(numID == 71) activationKeyId = 'keyId'+ (79);
-    else if(numID == 79) activationKeyId = 'keyId'+ (70);
-    else if(numID == 70) activationKeyId = 'keyId'+ (71);
+    if(numID == 70) activationKeyId = 'keyId'+ (79);
+    else if(numID == 79) activationKeyId = 'keyId'+ (71);
+    else if(numID == 71) activationKeyId = 'keyId'+ (70);
     else
     {
         for(var i = 1;;i++)
@@ -325,9 +325,9 @@ function macroBindKeyHandle(v)
     document.getElementById(activationKeyId).innerHTML = "M" + macroId;
     document.getElementById(activationKeyId).style.background = "#ffffff";
 
-    if(numID == 71) activationKeyId = 'keyId'+ (79);
-    else if(numID == 79) activationKeyId = 'keyId'+ (70);
-    else if(numID == 70) activationKeyId = 'keyId'+ (71);
+    if(numID == 70) activationKeyId = 'keyId'+ (79);
+    else if(numID == 79) activationKeyId = 'keyId'+ (71);
+    else if(numID == 71) activationKeyId = 'keyId'+ (70);
     else
     {
         for(var i = 1;;i++)
