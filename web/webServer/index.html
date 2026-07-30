@@ -16,14 +16,19 @@
       <div class="topInfoBar">
         <div class="topStatusBlock">
           <span id="fsInfo">FS --</span>
-          <span id="versionInfo">版本 --</span>
         </div>
-        <div>
+        <div class="topButtonRow">
           <input type="button" id="showKeyboardPage" class="topButton topButtonActive" value="键盘" />
           <input type="button" id="showMacroPage" class="topButton" value="宏" />
           <input type="button" id="showBounceDiagPage" class="topButton" value="轴抖动" />
-          <input type="button" id="showUploadPage" value="上传页" style="height: 30px; padding-left: 16px; padding-right: 16px;" />
-          <input type="button" id="deviceReboot" value="重启设备" style="height: 30px; padding-left: 16px; padding-right: 16px;" />
+          <input type="button" id="showUploadPage" class="topButton" value="上传页" />
+          <input type="button" id="deviceReboot" class="topButton" value="重启设备" />
+          <input type="button" id="showVersionInfo" class="topButton" value="版本信息" />
+          <input type="button" id="languageToggle" class="topButton" value="English" />
+        </div>
+        <div id="versionInfoPopup" class="versionInfoPopup">
+          <div class="versionPopupTitle" id="versionPopupTitle">版本信息</div>
+          <div id="versionInfo">版本 --</div>
         </div>
       </div>
       <div id="keyboardPage">
@@ -354,14 +359,14 @@
         <div class="macroPanel">
           <div class="macroHeader">
             <div>
-              <div class="macroTitle">宏编辑</div>
+              <div class="macroTitle" id="macroPageTitle">宏编辑</div>
               <div class="macroMeta">
                 <span id="macroCurrentTitle">M1</span>
                 <span id="macroActionCount">0 动作</span>
                 <input type="hidden" id="macroId" value="1" />
                 <select id="macroMode" class="macroModeCompact">
-                  <option value="0">按下触发</option>
-                  <option value="1">按下循环</option>
+                  <option value="0" id="macroModePress">按下触发</option>
+                  <option value="1" id="macroModeLoop">按下循环</option>
                 </select>
                 <span id="macroDirtyBadge"></span>
               </div>
@@ -372,7 +377,7 @@
               <input type="button" id="macroSave" class="macroButton macroButtonSave" value="保存" />
             </div>
           </div>
-          <div class="macroSectionTitle">动作</div>
+          <div class="macroSectionTitle" id="macroActionsTitle">动作</div>
           <div class="macroRow macroEditRow">
             <input type="button" id="macroAddAction" class="macroButton" value="添加按键" />
             <input type="button" id="macroAddDelay" class="macroButton" value="添加延时" />
@@ -385,10 +390,10 @@
             <input type="number" id="macroDelayValue" class="macroDelayInput" min="1" max="60000" step="10" value="100" />
             <span class="macroUnit">ms</span>
           </div>
-          <div class="macroSectionTitle">宏列表</div>
+          <div class="macroSectionTitle" id="macroListTitle">宏列表</div>
           <div id="macroList"></div>
           <div id="macroActionList"></div>
-          <div class="macroSectionTitle">按键选择</div>
+          <div class="macroSectionTitle" id="macroKeySelectTitle">按键选择</div>
           <div id="macroKeyboardHost"></div>
         </div>
       </div>
@@ -396,7 +401,7 @@
         <div class="bouncePanel">
           <div class="macroHeader">
             <div>
-              <div class="macroTitle">机械轴抖动检测</div>
+              <div class="macroTitle" id="bouncePageTitle">机械轴抖动检测</div>
               <div class="macroMeta">
                 <span id="bounceDiagState">等待开始</span>
                 <span id="bounceDiagTarget">未选择按键</span>
@@ -409,44 +414,44 @@
           </div>
           <div class="bounceSteps">
             <div id="bounceStepIdle" class="bounceStep bounceStepActive">
-              <div class="bounceStepNo">步骤 1</div>
-              <div class="bounceStepTitle">按任意键开始检测</div>
-              <div class="bounceStepText">进入页面后设备会暂停键盘上报，第一次按下的按键就是本次检测目标。</div>
+              <div class="bounceStepNo" id="bounceStepIdleNo">步骤 1</div>
+              <div class="bounceStepTitle" id="bounceStepIdleTitle">按任意键开始检测</div>
+              <div class="bounceStepText" id="bounceStepIdleText">进入页面后设备会暂停键盘上报，第一次按下的按键就是本次检测目标。</div>
             </div>
             <div id="bounceStepSelect" class="bounceStep">
-              <div class="bounceStepNo">步骤 2</div>
-              <div class="bounceStepTitle">等待目标按键</div>
-              <div class="bounceStepText">按下任意机械轴，页面会将这个按键作为本次检测目标。</div>
+              <div class="bounceStepNo" id="bounceStepSelectNo">步骤 2</div>
+              <div class="bounceStepTitle" id="bounceStepSelectTitle">等待目标按键</div>
+              <div class="bounceStepText" id="bounceStepSelectText">按下任意机械轴，页面会将这个按键作为本次检测目标。</div>
             </div>
             <div id="bounceStepRelease" class="bounceStep">
-              <div class="bounceStepNo">步骤 3</div>
-              <div class="bounceStepTitle">松开按键并等待稳定</div>
-              <div class="bounceStepText">设备会等待所有列信号释放并稳定 300ms，然后才开始正式采集。</div>
+              <div class="bounceStepNo" id="bounceStepReleaseNo">步骤 3</div>
+              <div class="bounceStepTitle" id="bounceStepReleaseTitle">松开按键并等待稳定</div>
+              <div class="bounceStepText" id="bounceStepReleaseText">设备会等待所有列信号释放并稳定 300ms，然后才开始正式采集。</div>
             </div>
             <div id="bounceStepPress" class="bounceStep">
-              <div class="bounceStepNo">步骤 4</div>
-              <div class="bounceStepTitle">正式按下测试</div>
-              <div class="bounceStepText">再次按下同一个按键并保持到页面提示松开，PIO 会记录按下过程中的跳变次数和间隔。</div>
+              <div class="bounceStepNo" id="bounceStepPressNo">步骤 4</div>
+              <div class="bounceStepTitle" id="bounceStepPressTitle">正式按下测试</div>
+              <div class="bounceStepText" id="bounceStepPressText">再次按下同一个按键并保持到页面提示松开，PIO 会记录按下过程中的跳变次数和间隔。</div>
             </div>
             <div id="bounceStepDone" class="bounceStep">
-              <div class="bounceStepNo">步骤 5</div>
-              <div class="bounceStepTitle">松开并查看结果</div>
-              <div class="bounceStepText">页面提示松开后正常松开按键，完成后会显示按下和松开两段抖动数据。</div>
+              <div class="bounceStepNo" id="bounceStepDoneNo">步骤 5</div>
+              <div class="bounceStepTitle" id="bounceStepDoneTitle">松开并查看结果</div>
+              <div class="bounceStepText" id="bounceStepDoneText">页面提示松开后正常松开按键，完成后会显示按下和松开两段抖动数据。</div>
             </div>
           </div>
           <div class="bounceResult">
-            <div class="bounceMetric"><span>当前状态</span><strong id="bounceMetricState">等待开始</strong></div>
-            <div class="bounceMetric"><span>目标按键</span><strong id="bounceMetricKey">--</strong></div>
-            <div class="bounceMetric"><span>按下跳变</span><strong id="bounceMetricEdges">--</strong></div>
-            <div class="bounceMetric"><span>松开跳变</span><strong id="bounceMetricReleaseEdges">--</strong></div>
-            <div class="bounceMetric"><span>按下到稳定</span><strong id="bounceMetricPressTotal">--</strong></div>
-            <div class="bounceMetric"><span>松开到稳定</span><strong id="bounceMetricReleaseTotal">--</strong></div>
+            <div class="bounceMetric"><span id="bounceMetricStateLabel">当前状态</span><strong id="bounceMetricState">等待开始</strong></div>
+            <div class="bounceMetric"><span id="bounceMetricKeyLabel">目标按键</span><strong id="bounceMetricKey">--</strong></div>
+            <div class="bounceMetric"><span id="bounceMetricEdgesLabel">按下跳变</span><strong id="bounceMetricEdges">--</strong></div>
+            <div class="bounceMetric"><span id="bounceMetricReleaseEdgesLabel">松开跳变</span><strong id="bounceMetricReleaseEdges">--</strong></div>
+            <div class="bounceMetric"><span id="bounceMetricPressTotalLabel">按下到稳定</span><strong id="bounceMetricPressTotal">--</strong></div>
+            <div class="bounceMetric"><span id="bounceMetricReleaseTotalLabel">松开到稳定</span><strong id="bounceMetricReleaseTotal">--</strong></div>
           </div>
           <div class="macroSectionTitle" id="bounceIntervalTitle">按下跳变间隔</div>
           <div id="bounceIntervalList" class="bounceIntervals">等待测试结果</div>
           <div class="macroSectionTitle" id="bounceReleaseIntervalTitle">松开跳变间隔</div>
           <div id="bounceReleaseIntervalList" class="bounceIntervals">等待测试结果</div>
-          <div class="macroSectionTitle">本页历史记录</div>
+          <div class="macroSectionTitle" id="bounceHistoryTitle">本页历史记录</div>
           <div id="bounceHistoryList" class="bounceHistoryList">暂无历史记录</div>
         </div>
       </div>
@@ -454,7 +459,7 @@
         <div class="uploadPanel">
           <div class="macroHeader">
             <div>
-              <div class="macroTitle">GIF 上传</div>
+              <div class="macroTitle" id="gifUploadTitle">GIF 上传</div>
               <div class="macroMeta">
                 <span id="gifUploadInfo">160x80，最大 512K</span>
                 <span id="gifUploadState">等待选择文件</span>

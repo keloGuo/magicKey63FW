@@ -1,13 +1,445 @@
 //页面加载完成，获取当前层和，当前层数据
 //层按键，设置当前激活层，并返回当前激活层按钮
 
-const MAGIC63_SETTINGS_PAGE_VERSION = "20260727.2";
+const MAGIC63_SETTINGS_PAGE_VERSION = "20260730.2";
+var magic63Lang = "zh";
+var magic63LastFsInfo = null;
+var magic63LastVersionInfo = null;
+
+var MAGIC63_I18N = {
+    zh: {
+        languageToggle: "English",
+        showKeyboardPage: "键盘",
+        showMacroPage: "宏",
+        showBounceDiagPage: "轴抖动",
+        showUploadPage: "上传页",
+        deviceReboot: "重启设备",
+        showVersionInfo: "版本信息",
+        versionPopupTitle: "版本信息",
+        versionDefault: "版本 --",
+        fsDefault: "FS --",
+        macroPageTitle: "宏编辑",
+        macroModePress: "按下触发",
+        macroModeLoop: "按下循环",
+        macroNew: "新建宏",
+        macroDelete: "删除宏",
+        macroSave: "保存",
+        macroActionsTitle: "动作",
+        macroAddAction: "添加按键",
+        macroAddDelay: "添加延时",
+        macroDeleteAction: "删除按键",
+        macroDeleteDelay: "删除延时",
+        macroTypeDown: "按下",
+        macroTypeTap: "按下松开",
+        macroTypeUp: "松开",
+        macroListTitle: "宏列表",
+        macroKeySelectTitle: "按键选择",
+        macroActionUnit: " 动作",
+        macroUnsaved: "未保存",
+        macroCountUnit: " 个",
+        bouncePageTitle: "机械轴抖动检测",
+        bounceDiagStart: "重新检测",
+        bounceDiagCancel: "取消检测",
+        bounceStepIdleNo: "步骤 1",
+        bounceStepIdleTitle: "按任意键开始检测",
+        bounceStepIdleText: "进入页面后设备会暂停键盘上报，第一次按下的按键就是本次检测目标。",
+        bounceStepSelectNo: "步骤 2",
+        bounceStepSelectTitle: "等待目标按键",
+        bounceStepSelectText: "按下任意机械轴，页面会将这个按键作为本次检测目标。",
+        bounceStepReleaseNo: "步骤 3",
+        bounceStepReleaseTitle: "松开按键并等待稳定",
+        bounceStepReleaseText: "设备会等待所有列信号释放并稳定 300ms，然后才开始正式采集。",
+        bounceStepPressNo: "步骤 4",
+        bounceStepPressTitle: "正式按下测试",
+        bounceStepPressText: "再次按下同一个按键并保持到页面提示松开，PIO 会记录按下过程中的跳变次数和间隔。",
+        bounceStepDoneNo: "步骤 5",
+        bounceStepDoneTitle: "松开并查看结果",
+        bounceStepDoneText: "页面提示松开后正常松开按键，完成后会显示按下和松开两段抖动数据。",
+        bounceMetricStateLabel: "当前状态",
+        bounceMetricKeyLabel: "目标按键",
+        bounceMetricEdgesLabel: "按下跳变",
+        bounceMetricReleaseEdgesLabel: "松开跳变",
+        bounceMetricPressTotalLabel: "按下到稳定",
+        bounceMetricReleaseTotalLabel: "松开到稳定",
+        bounceIntervalTitle: "按下跳变间隔",
+        bounceReleaseIntervalTitle: "松开跳变间隔",
+        bounceHistoryTitle: "本页历史记录",
+        bounceState0: "等待开始",
+        bounceState1: "步骤 1：请按任意键开始检测",
+        bounceState2: "步骤 3：请松开按键，等待设备确认释放稳定",
+        bounceState3: "步骤 4：请正式按下目标按键并保持",
+        bounceState4: "正在采集：请继续保持按下",
+        bounceState5: "步骤 5：按下已稳定，请松开目标按键",
+        bounceState6: "正在采集松开抖动",
+        bounceState7: "检测完成，按任意键继续",
+        bounceState8: "检测异常",
+        bounceStateUnknown: "未知状态",
+        bounceKeyPos: "第 {row} 行，第 {col} 列",
+        bounceTitleMore: "{title}（共 {total} 次，显示前 {shown} 次）",
+        bounceNoIntervals: "暂无跳变间隔",
+        bounceIntervalItem: "第 {index} 次 {value}us",
+        bounceMoreIntervals: "其余 {count} 次未缓存",
+        bounceNoHistory: "暂无历史记录",
+        bounceHistoryPress: "按下抖动",
+        bounceHistoryRelease: "松开抖动",
+        bounceHistoryPressStable: "按下稳定",
+        bounceHistoryReleaseStable: "松开稳定",
+        deviceConnectFail: "无法连接设备",
+        gifUploadTitle: "GIF 上传",
+        gifUploadInfo: "160x80，最大 512K",
+        gifUploadState: "等待选择文件",
+        waitTestResult: "等待测试结果",
+        gifUploadStart: "上传 GIF",
+        gifUploadCancel: "取消",
+        gifCanceled: "已取消",
+        gifDone: "上传完成",
+        gifUploading: "上传中 {percent}%",
+        gifReadFail: "读取失败",
+        gifUploadFail: "上传失败",
+        gifWriteFail: "写入失败",
+        gifSelect: "请选择 GIF",
+        gifTypeFail: "文件类型错误",
+        gifTooLarge: "超过 512K",
+        gifResolutionFail: "分辨率必须 160x80",
+        gifStartFail: "启动失败",
+        fsInfo: "FS 剩余 {free} / {total}",
+        versionInfo: "固件：{firmware}<br>配置：{config}<br>USB：{usb}<br>设置页：{settings}<br>上传页：{upload}",
+        encoderLeft: "编码器左",
+        encoderPress: "编码器按下",
+        encoderRight: "编码器右",
+        volDown: "音量减",
+        mute: "静音",
+        volUp: "音量加",
+        media: "播放器",
+        prevTrack: "上一曲",
+        playPause: "暂停/播放",
+        nextTrack: "下一曲",
+        stop: "停止",
+        browser: "浏览器",
+        mouseLeft: "鼠标左键",
+        mouseMiddle: "鼠标中键",
+        mouseRight: "鼠标右键",
+        wheelUp: "滚轮上",
+        wheelDown: "滚轮下",
+        statusPage: "状态页",
+        layerPage: "层页",
+        lightPage: "灯页",
+        ratePage: "速率页",
+        codexPage: "Codex页",
+        macroRecPage: "录宏页",
+        apmPage: "APM页",
+        meritPage: "功德页",
+        networkPage: "网络页",
+        bootPage: "Boot页",
+        statusInner: "状态内",
+        layerInner: "层内",
+        lightInner: "灯内",
+        rateInner: "速率内",
+        codexInner: "Codex内",
+        macroRecInner: "录宏内",
+        meritInner: "功德内",
+        networkInner: "网络内"
+    },
+    en: {
+        languageToggle: "中文",
+        showKeyboardPage: "Keyboard",
+        showMacroPage: "Macro",
+        showBounceDiagPage: "Bounce",
+        showUploadPage: "Upload",
+        deviceReboot: "Reboot",
+        showVersionInfo: "Version",
+        versionPopupTitle: "Version Info",
+        versionDefault: "Version --",
+        fsDefault: "FS --",
+        macroPageTitle: "Macro Editor",
+        macroModePress: "Press Trigger",
+        macroModeLoop: "Press Loop",
+        macroNew: "New Macro",
+        macroDelete: "Delete Macro",
+        macroSave: "Save",
+        macroActionsTitle: "Actions",
+        macroAddAction: "Add Key",
+        macroAddDelay: "Add Delay",
+        macroDeleteAction: "Delete Key",
+        macroDeleteDelay: "Delete Delay",
+        macroTypeDown: "Down",
+        macroTypeTap: "Tap",
+        macroTypeUp: "Up",
+        macroListTitle: "Macro List",
+        macroKeySelectTitle: "Key Picker",
+        macroActionUnit: " actions",
+        macroUnsaved: "Unsaved",
+        macroCountUnit: " item(s)",
+        bouncePageTitle: "Switch Bounce Test",
+        bounceDiagStart: "Retest",
+        bounceDiagCancel: "Cancel",
+        bounceStepIdleNo: "Step 1",
+        bounceStepIdleTitle: "Press any key to start",
+        bounceStepIdleText: "The device pauses keyboard reports. The first pressed switch becomes the test target.",
+        bounceStepSelectNo: "Step 2",
+        bounceStepSelectTitle: "Waiting for target key",
+        bounceStepSelectText: "Press one mechanical switch. This action only selects the target and is not part of the final result.",
+        bounceStepReleaseNo: "Step 3",
+        bounceStepReleaseTitle: "Release and wait for stable",
+        bounceStepReleaseText: "The device waits until all column signals are released and stable for 300 ms before sampling.",
+        bounceStepPressNo: "Step 4",
+        bounceStepPressTitle: "Press test",
+        bounceStepPressText: "Press the same key again and hold it until the page asks you to release. PIO records edge count and intervals.",
+        bounceStepDoneNo: "Step 5",
+        bounceStepDoneTitle: "Release and view result",
+        bounceStepDoneText: "Release the key normally. The page shows both press and release bounce data after completion.",
+        bounceMetricStateLabel: "State",
+        bounceMetricKeyLabel: "Target",
+        bounceMetricEdgesLabel: "Press edges",
+        bounceMetricReleaseEdgesLabel: "Release edges",
+        bounceMetricPressTotalLabel: "Press stable",
+        bounceMetricReleaseTotalLabel: "Release stable",
+        bounceIntervalTitle: "Press edge intervals",
+        bounceReleaseIntervalTitle: "Release edge intervals",
+        bounceHistoryTitle: "Current Page History",
+        bounceState0: "Waiting",
+        bounceState1: "Step 1: press any key to start",
+        bounceState2: "Step 3: release the key and wait for stable detection",
+        bounceState3: "Step 4: press and hold the target key",
+        bounceState4: "Sampling: keep holding the key",
+        bounceState5: "Step 5: press is stable, release the target key",
+        bounceState6: "Sampling release bounce",
+        bounceState7: "Done, press any key to continue",
+        bounceState8: "Test error",
+        bounceStateUnknown: "Unknown state",
+        bounceKeyPos: "Row {row}, Col {col}",
+        bounceTitleMore: "{title} ({total} total, showing first {shown})",
+        bounceNoIntervals: "No edge intervals",
+        bounceIntervalItem: "#{index} {value}us",
+        bounceMoreIntervals: "{count} more not cached",
+        bounceNoHistory: "No history",
+        bounceHistoryPress: "Press bounce",
+        bounceHistoryRelease: "Release bounce",
+        bounceHistoryPressStable: "Press stable",
+        bounceHistoryReleaseStable: "Release stable",
+        deviceConnectFail: "Device unreachable",
+        gifUploadTitle: "GIF Upload",
+        gifUploadInfo: "160x80, max 512K",
+        gifUploadState: "Waiting for file",
+        waitTestResult: "Waiting for result",
+        gifUploadStart: "Upload GIF",
+        gifUploadCancel: "Cancel",
+        gifCanceled: "Canceled",
+        gifDone: "Upload complete",
+        gifUploading: "Uploading {percent}%",
+        gifReadFail: "Read failed",
+        gifUploadFail: "Upload failed",
+        gifWriteFail: "Write failed",
+        gifSelect: "Select a GIF",
+        gifTypeFail: "Wrong file type",
+        gifTooLarge: "Over 512K",
+        gifResolutionFail: "Resolution must be 160x80",
+        gifStartFail: "Start failed",
+        fsInfo: "FS free {free} / {total}",
+        versionInfo: "Firmware: {firmware}<br>Config: {config}<br>USB: {usb}<br>Settings: {settings}<br>Upload: {upload}",
+        encoderLeft: "Encoder Left",
+        encoderPress: "Encoder Press",
+        encoderRight: "Encoder Right",
+        volDown: "Vol-",
+        mute: "Mute",
+        volUp: "Vol+",
+        media: "Media",
+        prevTrack: "Previous",
+        playPause: "Play/Pause",
+        nextTrack: "Next",
+        stop: "Stop",
+        browser: "Browser",
+        mouseLeft: "Mouse Left",
+        mouseMiddle: "Mouse Middle",
+        mouseRight: "Mouse Right",
+        wheelUp: "Wheel Up",
+        wheelDown: "Wheel Down",
+        statusPage: "Status Page",
+        layerPage: "Layer Page",
+        lightPage: "Light Page",
+        ratePage: "Rate Page",
+        codexPage: "Codex Page",
+        macroRecPage: "Macro Rec",
+        apmPage: "APM Page",
+        meritPage: "Merit Page",
+        networkPage: "Network Page",
+        bootPage: "Boot Page",
+        statusInner: "Status Inner",
+        layerInner: "Layer Inner",
+        lightInner: "Light Inner",
+        rateInner: "Rate Inner",
+        codexInner: "Codex Inner",
+        macroRecInner: "Macro Rec Inner",
+        meritInner: "Merit Inner",
+        networkInner: "Network Inner"
+    },
+};
+
+var MAGIC63_LABEL_IDS = {
+    keyId70: "encoderLeft",
+    keyId79: "encoderPress",
+    keyId71: "encoderRight",
+    IDM1: "volDown",
+    IDM2: "mute",
+    IDM0: "volUp",
+    IDM4: "media",
+    IDM7: "prevTrack",
+    IDM6: "playPause",
+    IDM8: "nextTrack",
+    IDM9: "stop",
+    IDM5: "browser",
+    IDS0: "mouseLeft",
+    IDS2: "mouseMiddle",
+    IDS1: "mouseRight",
+    IDS3: "wheelUp",
+    IDS4: "wheelDown",
+    IDP1: "statusPage",
+    IDP2: "layerPage",
+    IDP3: "lightPage",
+    IDP4: "ratePage",
+    IDP5: "codexPage",
+    IDP6: "macroRecPage",
+    IDP7: "apmPage",
+    IDP8: "meritPage",
+    IDP9: "networkPage",
+    IDP10: "bootPage",
+    IDQ1: "statusInner",
+    IDQ2: "layerInner",
+    IDQ3: "lightInner",
+    IDQ4: "rateInner",
+    IDQ5: "codexInner",
+    IDQ6: "macroRecInner",
+    IDQ8: "meritInner",
+    IDQ9: "networkInner"
+};
+
+function i18nText(key, data)
+{
+    var table = MAGIC63_I18N[magic63Lang] || MAGIC63_I18N.zh;
+    var text = table[key] != null ? table[key] : (MAGIC63_I18N.zh[key] || key);
+    if(data != null)
+    {
+        for(var k in data) text = text.replace(new RegExp("\\{" + k + "\\}", "g"), data[k]);
+    }
+    return text;
+}
+
+function i18nSetText(id, key)
+{
+    var el = document.getElementById(id);
+    if(el != null) el.innerHTML = i18nText(key);
+}
+
+function i18nSetValue(id, key)
+{
+    var el = document.getElementById(id);
+    if(el != null) el.value = i18nText(key);
+}
+
+function i18nApplyLabels()
+{
+    for(var id in MAGIC63_LABEL_IDS)
+    {
+        var el = document.getElementById(id);
+        if(el == null) continue;
+        var text = i18nText(MAGIC63_LABEL_IDS[id]);
+        el.innerHTML = text;
+        el.setAttribute("name", text);
+    }
+}
+
+function i18nApply()
+{
+    i18nSetValue("languageToggle", "languageToggle");
+    i18nSetValue("showKeyboardPage", "showKeyboardPage");
+    i18nSetValue("showMacroPage", "showMacroPage");
+    i18nSetValue("showBounceDiagPage", "showBounceDiagPage");
+    i18nSetValue("showUploadPage", "showUploadPage");
+    i18nSetValue("deviceReboot", "deviceReboot");
+    i18nSetValue("showVersionInfo", "showVersionInfo");
+    i18nSetText("versionPopupTitle", "versionPopupTitle");
+    i18nSetText("macroPageTitle", "macroPageTitle");
+    i18nSetText("macroModePress", "macroModePress");
+    i18nSetText("macroModeLoop", "macroModeLoop");
+    i18nSetValue("macroNew", "macroNew");
+    i18nSetValue("macroDelete", "macroDelete");
+    i18nSetValue("macroSave", "macroSave");
+    i18nSetText("macroActionsTitle", "macroActionsTitle");
+    i18nSetValue("macroAddAction", "macroAddAction");
+    i18nSetValue("macroAddDelay", "macroAddDelay");
+    i18nSetValue("macroDeleteAction", "macroDeleteAction");
+    i18nSetValue("macroDeleteDelay", "macroDeleteDelay");
+    i18nSetValue("macroTypeDown", "macroTypeDown");
+    i18nSetValue("macroTypeTap", "macroTypeTap");
+    i18nSetValue("macroTypeUp", "macroTypeUp");
+    i18nSetText("macroListTitle", "macroListTitle");
+    i18nSetText("macroKeySelectTitle", "macroKeySelectTitle");
+    i18nSetText("bouncePageTitle", "bouncePageTitle");
+    i18nSetValue("bounceDiagStart", "bounceDiagStart");
+    i18nSetValue("bounceDiagCancel", "bounceDiagCancel");
+    i18nSetText("bounceStepIdleNo", "bounceStepIdleNo");
+    i18nSetText("bounceStepIdleTitle", "bounceStepIdleTitle");
+    i18nSetText("bounceStepIdleText", "bounceStepIdleText");
+    i18nSetText("bounceStepSelectNo", "bounceStepSelectNo");
+    i18nSetText("bounceStepSelectTitle", "bounceStepSelectTitle");
+    i18nSetText("bounceStepSelectText", "bounceStepSelectText");
+    i18nSetText("bounceStepReleaseNo", "bounceStepReleaseNo");
+    i18nSetText("bounceStepReleaseTitle", "bounceStepReleaseTitle");
+    i18nSetText("bounceStepReleaseText", "bounceStepReleaseText");
+    i18nSetText("bounceStepPressNo", "bounceStepPressNo");
+    i18nSetText("bounceStepPressTitle", "bounceStepPressTitle");
+    i18nSetText("bounceStepPressText", "bounceStepPressText");
+    i18nSetText("bounceStepDoneNo", "bounceStepDoneNo");
+    i18nSetText("bounceStepDoneTitle", "bounceStepDoneTitle");
+    i18nSetText("bounceStepDoneText", "bounceStepDoneText");
+    i18nSetText("bounceMetricStateLabel", "bounceMetricStateLabel");
+    i18nSetText("bounceMetricKeyLabel", "bounceMetricKeyLabel");
+    i18nSetText("bounceMetricEdgesLabel", "bounceMetricEdgesLabel");
+    i18nSetText("bounceMetricReleaseEdgesLabel", "bounceMetricReleaseEdgesLabel");
+    i18nSetText("bounceMetricPressTotalLabel", "bounceMetricPressTotalLabel");
+    i18nSetText("bounceMetricReleaseTotalLabel", "bounceMetricReleaseTotalLabel");
+    i18nSetText("bounceIntervalTitle", "bounceIntervalTitle");
+    i18nSetText("bounceReleaseIntervalTitle", "bounceReleaseIntervalTitle");
+    i18nSetText("bounceHistoryTitle", "bounceHistoryTitle");
+    i18nSetText("gifUploadTitle", "gifUploadTitle");
+    i18nSetText("gifUploadInfo", "gifUploadInfo");
+    if(gifUploadBusy == 0) i18nSetText("gifUploadState", "gifUploadState");
+    i18nSetValue("gifUploadStart", "gifUploadStart");
+    i18nSetValue("gifUploadCancel", "gifUploadCancel");
+    i18nApplyLabels();
+    if(magic63LastFsInfo == null) i18nSetText("fsInfo", "fsDefault");
+    if(magic63LastVersionInfo == null) i18nSetText("versionInfo", "versionDefault");
+    var intervalList = document.getElementById("bounceIntervalList");
+    if(intervalList != null && (intervalList.innerHTML == "等待测试结果" || intervalList.innerHTML == "Waiting for result")) intervalList.innerHTML = i18nText("waitTestResult");
+    var releaseIntervalList = document.getElementById("bounceReleaseIntervalList");
+    if(releaseIntervalList != null && (releaseIntervalList.innerHTML == "等待测试结果" || releaseIntervalList.innerHTML == "Waiting for result")) releaseIntervalList.innerHTML = i18nText("waitTestResult");
+    if(magic63LastFsInfo != null) fsInfoShow(magic63LastFsInfo);
+    if(magic63LastVersionInfo != null) versionInfoShow(magic63LastVersionInfo);
+    macroRender();
+    bounceDiagHistoryRender();
+}
+
+function i18nInit()
+{
+    var saved = localStorage.getItem("magic63Lang");
+    if(saved == "zh" || saved == "en") magic63Lang = saved;
+    else magic63Lang = (navigator.language || "").toLowerCase().indexOf("zh") == 0 ? "zh" : "en";
+    var button = document.getElementById("languageToggle");
+    if(button != null)
+    {
+        button.addEventListener("click", function(){
+            magic63Lang = magic63Lang == "zh" ? "en" : "zh";
+            localStorage.setItem("magic63Lang", magic63Lang);
+            i18nApply();
+            keymapGetData(0xff);
+        });
+    }
+    i18nApply();
+}
 
 window.onload = function () {
     console.log("onload");
     console.log("MagicKey63 settings page version", MAGIC63_SETTINGS_PAGE_VERSION);
-
-    keymapGetData(0xff);
 
     KeyboardKeylisten();
     virtualKeyboardKeylisten();
@@ -21,6 +453,8 @@ window.onload = function () {
     gifUploadInit();
     macroEditorInit();
     bounceDiagInit();
+    i18nInit();
+    keymapGetData(0xff);
     fsInfoGet();
     versionInfoGet();
   };
@@ -513,12 +947,29 @@ function uploadPageOpen()
     pageShow("gifUpload");
 }
 
+function versionInfoToggle()
+{
+    var popup = document.getElementById("versionInfoPopup");
+    if(popup == null) return 0;
+    if(popup.className.indexOf("versionInfoPopupOpen") >= 0)
+    {
+        popup.className = "versionInfoPopup";
+    }
+    else
+    {
+        popup.className = "versionInfoPopup versionInfoPopupOpen";
+        versionInfoGet();
+    }
+}
+
 function deviceControlListen()
 {
     var rebootButton = document.getElementById("deviceReboot");
     var uploadButton = document.getElementById("showUploadPage");
+    var versionButton = document.getElementById("showVersionInfo");
     if(uploadButton != null) uploadButton.addEventListener('click', uploadPageOpen);
     if(rebootButton != null) rebootButton.addEventListener('click', deviceReboot);
+    if(versionButton != null) versionButton.addEventListener('click', versionInfoToggle);
 }
 
 function pageShow(name)
@@ -605,16 +1056,8 @@ function bounceDiagCancelBeacon()
 
 function bounceDiagStateCn(state)
 {
-    if(state == 0) return "等待开始";
-    if(state == 1) return "步骤 1：请按任意键开始检测";
-    if(state == 2) return "步骤 3：请松开按键，等待设备确认释放稳定";
-    if(state == 3) return "步骤 4：请正式按下目标按键并保持";
-    if(state == 4) return "正在采集：请继续保持按下";
-    if(state == 5) return "步骤 5：按下已稳定，请松开目标按键";
-    if(state == 6) return "正在采集松开抖动";
-    if(state == 7) return "检测完成，按任意键继续";
-    if(state == 8) return "检测异常";
-    return "未知状态";
+    if(state >= 0 && state <= 8) return i18nText("bounceState" + state);
+    return i18nText("bounceStateUnknown");
 }
 
 function bounceDiagStepForState(state)
@@ -650,7 +1093,7 @@ function bounceDiagKeyText(obj)
 {
     if(obj == null || obj.row == null || obj.col == null) return "--";
     if(parseInt(obj.row) >= 255 || parseInt(obj.col) >= 255) return "--";
-    return "第 " + (parseInt(obj.row) + 1) + " 行，第 " + (parseInt(obj.col) + 1) + " 列";
+    return i18nText("bounceKeyPos", {row: parseInt(obj.row) + 1, col: parseInt(obj.col) + 1});
 }
 
 function bounceDiagShowIntervals(rootId, titleId, baseTitle, list, edgeCount)
@@ -663,26 +1106,26 @@ function bounceDiagShowIntervals(rootId, titleId, baseTitle, list, edgeCount)
     var shown = list == null ? 0 : list.length;
     if(title != null)
     {
-        if(edgeCount > shown) title.innerHTML = baseTitle + "（共 " + edgeCount + " 次，显示前 " + shown + " 次）";
+        if(edgeCount > shown) title.innerHTML = i18nText("bounceTitleMore", {title: baseTitle, total: edgeCount, shown: shown});
         else title.innerHTML = baseTitle;
     }
     if(list == null || list.length == 0)
     {
-        root.innerHTML = "暂无跳变间隔";
+        root.innerHTML = i18nText("bounceNoIntervals");
         return 0;
     }
     for(var i = 0;i<list.length;i++)
     {
         var box = document.createElement("div");
         box.className = "bounceIntervalBox";
-        box.innerHTML = "第 " + (i + 1) + " 次 " + list[i] + "us";
+        box.innerHTML = i18nText("bounceIntervalItem", {index: i + 1, value: list[i]});
         root.appendChild(box);
     }
     if(edgeCount > list.length)
     {
         var more = document.createElement("div");
         more.className = "bounceIntervalBox bounceIntervalMore";
-        more.innerHTML = "其余 " + (edgeCount - list.length) + " 次未缓存";
+        more.innerHTML = i18nText("bounceMoreIntervals", {count: edgeCount - list.length});
         root.appendChild(more);
     }
 }
@@ -716,7 +1159,7 @@ function bounceDiagHistoryRender()
     root.innerHTML = "";
     if(bounceDiagHistory.length == 0)
     {
-        root.innerHTML = "暂无历史记录";
+        root.innerHTML = i18nText("bounceNoHistory");
         return 0;
     }
     for(var i = 0;i<bounceDiagHistory.length;i++)
@@ -725,10 +1168,10 @@ function bounceDiagHistoryRender()
         var row = document.createElement("div");
         row.className = "bounceHistoryItem";
         row.innerHTML = "<strong>" + item.key + "</strong>" +
-            "<span>按下抖动 <strong>" + item.edgeCount + "</strong></span>" +
-            "<span>松开抖动 <strong>" + item.releaseEdgeCount + "</strong></span>" +
-            "<span>按下稳定 <strong>" + bounceDiagTimeText(item.pressTotalUs) + "</strong></span>" +
-            "<span>松开稳定 <strong>" + bounceDiagTimeText(item.releaseTotalUs) + "</strong></span>";
+            "<span>" + i18nText("bounceHistoryPress") + " <strong>" + item.edgeCount + "</strong></span>" +
+            "<span>" + i18nText("bounceHistoryRelease") + " <strong>" + item.releaseEdgeCount + "</strong></span>" +
+            "<span>" + i18nText("bounceHistoryPressStable") + " <strong>" + bounceDiagTimeText(item.pressTotalUs) + "</strong></span>" +
+            "<span>" + i18nText("bounceHistoryReleaseStable") + " <strong>" + bounceDiagTimeText(item.releaseTotalUs) + "</strong></span>";
         root.appendChild(row);
     }
 }
@@ -738,7 +1181,7 @@ function bounceDiagShow(obj)
     if(obj == null)
     {
         var stateFail = document.getElementById("bounceDiagState");
-        if(stateFail != null) stateFail.innerHTML = "无法连接设备";
+        if(stateFail != null) stateFail.innerHTML = i18nText("deviceConnectFail");
         return 0;
     }
     var state = parseInt(obj.state) || 0;
@@ -773,8 +1216,8 @@ function bounceDiagShow(obj)
     if(start != null) start.disabled = state != 0 && state != 7 && state != 8;
     if(cancel != null) cancel.disabled = state == 0 || state == 8;
 
-    bounceDiagShowIntervals("bounceIntervalList", "bounceIntervalTitle", "按下跳变间隔", obj.intervals || [], obj.edgeCount);
-    bounceDiagShowIntervals("bounceReleaseIntervalList", "bounceReleaseIntervalTitle", "松开跳变间隔", obj.releaseIntervals || [], obj.releaseEdgeCount);
+    bounceDiagShowIntervals("bounceIntervalList", "bounceIntervalTitle", i18nText("bounceIntervalTitle"), obj.intervals || [], obj.edgeCount);
+    bounceDiagShowIntervals("bounceReleaseIntervalList", "bounceReleaseIntervalTitle", i18nText("bounceReleaseIntervalTitle"), obj.releaseIntervals || [], obj.releaseEdgeCount);
     if(state == 7 && bounceDiagRunActive && bounceDiagRunRecorded == 0)
     {
         bounceDiagHistoryPush(obj);
@@ -944,29 +1387,29 @@ function gifUploadSendNext(fileObj, offset)
 {
     if(gifUploadCancelFlag) {
         gifUploadBusy = 0;
-        gifUploadSetState("已取消");
+        gifUploadSetState(i18nText("gifCanceled"));
         return;
     }
     if(offset >= fileObj.size) {
         gifUploadBusy = 0;
         gifUploadProgress(fileObj.size, fileObj.size);
-        gifUploadSetState("上传完成");
+        gifUploadSetState(i18nText("gifDone"));
         fsInfoGet();
         return;
     }
 
     var len = (offset + gifUploadChunkSize > fileObj.size) ? (fileObj.size - offset) : gifUploadChunkSize;
-    gifUploadSetState("上传中 " + Math.floor((offset * 100) / fileObj.size) + "%");
+    gifUploadSetState(i18nText("gifUploading", {percent: Math.floor((offset * 100) / fileObj.size)}));
     gifUploadChecksum(fileObj, offset, len, function(sum) {
         if(sum < 0) {
             gifUploadBusy = 0;
-            gifUploadSetState("读取失败");
+            gifUploadSetState(i18nText("gifReadFail"));
             return;
         }
         gifUploadRequestChunk(fileObj, offset, len, function(ok) {
             if(!ok) {
                 gifUploadBusy = 0;
-                gifUploadSetState("上传失败");
+                gifUploadSetState(i18nText("gifUploadFail"));
                 return;
             }
             gifUploadRequestJson("webFileUpdatePpakgEnter", {
@@ -977,7 +1420,7 @@ function gifUploadSendNext(fileObj, offset)
             }, function(ok2) {
                 if(!ok2) {
                     gifUploadBusy = 0;
-                    gifUploadSetState("写入失败");
+                    gifUploadSetState(i18nText("gifWriteFail"));
                     return;
                 }
                 gifUploadProgress(offset + len, fileObj.size);
@@ -992,21 +1435,21 @@ function gifUploadStart()
     if(gifUploadBusy) return;
     var input = document.getElementById("gifUploadFile");
     if(input == null || input.files.length == 0) {
-        gifUploadSetState("请选择 GIF");
+        gifUploadSetState(i18nText("gifSelect"));
         return;
     }
     var fileObj = input.files[0];
     if(fileObj.name.slice(fileObj.name.length - 4) != ".gif") {
-        gifUploadSetState("文件类型错误");
+        gifUploadSetState(i18nText("gifTypeFail"));
         return;
     }
     if(fileObj.size > gifUploadMaxSize) {
-        gifUploadSetState("超过 512K");
+        gifUploadSetState(i18nText("gifTooLarge"));
         return;
     }
     gifUploadCheckSize(fileObj, function(ok) {
         if(!ok) {
-            gifUploadSetState("分辨率必须 160x80");
+            gifUploadSetState(i18nText("gifResolutionFail"));
             return;
         }
         gifUploadBusy = 1;
@@ -1015,7 +1458,7 @@ function gifUploadStart()
         gifUploadRequestJson("updateStart", {size: fileObj.size, type: 2}, function(ok2) {
             if(!ok2) {
                 gifUploadBusy = 0;
-                gifUploadSetState("启动失败");
+                gifUploadSetState(i18nText("gifStartFail"));
                 return;
             }
             gifUploadSendNext(fileObj, 0);
@@ -1083,8 +1526,8 @@ function macroSelectedAction()
 
 function macroModeText(v)
 {
-    if(parseInt(v) == 1) return "按下循环";
-    return "按下触发";
+    if(parseInt(v) == 1) return i18nText("macroModeLoop");
+    return i18nText("macroModePress");
 }
 
 function macroUsageLabel(value)
@@ -1179,8 +1622,8 @@ function macroRenderMeta()
     var count = document.getElementById("macroActionCount");
     var dirty = document.getElementById("macroDirtyBadge");
     if(title != null) title.innerHTML = "M" + currentMacro.id;
-    if(count != null) count.innerHTML = currentMacro.actions.length + " 动作";
-    if(dirty != null) dirty.innerHTML = macroIsDirty() ? "未保存" : "";
+    if(count != null) count.innerHTML = currentMacro.actions.length + i18nText("macroActionUnit");
+    if(dirty != null) dirty.innerHTML = macroIsDirty() ? i18nText("macroUnsaved") : "";
 }
 
 function macroSetSelected(index)
@@ -1412,7 +1855,7 @@ function macroRenderCard(root, macro, selected)
 
     var countBox = document.createElement("div");
     countBox.className = "macroActionBox macroInfoBox macroCountBox";
-    countBox.innerHTML = (macro.actions || []).length + " 个";
+    countBox.innerHTML = (macro.actions || []).length + i18nText("macroCountUnit");
     info.appendChild(countBox);
     card.appendChild(info);
 
@@ -1550,7 +1993,7 @@ function macroNew()
 
 function macroDeleteCurrent()
 {
-    if(confirm("删除 M" + currentMacro.id + "?") == false) return 0;
+    if(confirm((magic63Lang == "en" ? "Delete M" : "删除 M") + currentMacro.id + "?") == false) return 0;
     if(macroIsSaved(currentMacro.id) == 0)
     {
         macroLoadObject({id:1, mode:0, actions:[], maxActions:macroMaxActions});
@@ -1653,7 +2096,8 @@ function fsInfoShow(obj)
 {
     var show = document.getElementById("fsInfo");
     if(show == null) return 0;
-    show.innerHTML = "FS 剩余 " + formatBytes(obj.fsFree) + " / " + formatBytes(obj.fsTotal);
+    magic63LastFsInfo = obj;
+    show.innerHTML = i18nText("fsInfo", {free: formatBytes(obj.fsFree), total: formatBytes(obj.fsTotal)});
 }
 
 function fsInfoGet()
@@ -1673,15 +2117,18 @@ function versionInfoShow(obj)
 {
     var show = document.getElementById("versionInfo");
     if(show == null) return 0;
+    magic63LastVersionInfo = obj;
     var firmwareVersion = obj && obj.firmware ? obj.firmware : "--";
     var uploadPageVersion = obj && obj.uploadPage ? obj.uploadPage : "--";
     var configVersion = obj && obj.configVersion !== undefined ? obj.configVersion : "--";
     var usbBcdDevice = obj && obj.usbBcdDevice ? obj.usbBcdDevice : "--";
-    show.innerHTML = "固件 " + firmwareVersion +
-        "　配置 " + configVersion +
-        "　USB " + usbBcdDevice +
-        "　设置页 " + MAGIC63_SETTINGS_PAGE_VERSION +
-        "　上传页 " + uploadPageVersion;
+    show.innerHTML = i18nText("versionInfo", {
+        firmware: firmwareVersion,
+        config: configVersion,
+        usb: usbBcdDevice,
+        settings: MAGIC63_SETTINGS_PAGE_VERSION,
+        upload: uploadPageVersion
+    });
 }
 
 function versionInfoGet()

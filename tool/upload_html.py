@@ -43,11 +43,12 @@ def post_chunk(device_url, chunk, timeout):
         return resp.read().decode("utf-8", errors="replace")
 
 
-def upload_html(device_url, path, timeout):
+def upload_html(device_url, path, timeout, delay):
     data = path.read_bytes()
     print(post_json(device_url, "updateStart", {"size": len(data), "type": 1}, timeout))
     for offset in range(0, len(data), CHUNK_SIZE):
         chunk = data[offset:offset + CHUNK_SIZE]
+        print(f"[upload] offset={offset} len={len(chunk)}")
         print(post_chunk(device_url, chunk, timeout))
         payload = {
             "offset": offset,
@@ -56,7 +57,7 @@ def upload_html(device_url, path, timeout):
             "over": 1 if offset + len(chunk) >= len(data) else 0,
         }
         print(post_json(device_url, "webFileUpdatePpakgEnter", payload, timeout))
-        time.sleep(0.02)
+        time.sleep(delay)
 
 
 def main():
@@ -64,8 +65,9 @@ def main():
     parser.add_argument("html", nargs="?", default=str(DEFAULT_HTML))
     parser.add_argument("--device-url", default=os.environ.get("DEVICE_URL", "http://10.63.27.1:80"))
     parser.add_argument("--timeout", type=float, default=3.0)
+    parser.add_argument("--delay", type=float, default=0.02)
     args = parser.parse_args()
-    upload_html(args.device_url, Path(args.html), args.timeout)
+    upload_html(args.device_url, Path(args.html), args.timeout, args.delay)
 
 
 if __name__ == "__main__":

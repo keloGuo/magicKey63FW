@@ -6,8 +6,9 @@
     margin-left: auto;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 16px;
+    position: relative;
 }
 
 .topStatusBlock {
@@ -19,6 +20,41 @@
     font-size: 13px;
     color: #333;
     line-height: 16px;
+}
+
+.topButtonRow {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.versionInfoPopup {
+    position: absolute;
+    right: 0px;
+    top: 38px;
+    min-width: 360px;
+    max-width: 520px;
+    display: none;
+    border: 1px solid #c9d3df;
+    border-radius: 8px;
+    padding: 12px;
+    background-color: #ffffff;
+    color: #17202a;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.16);
+    z-index: 20;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.versionInfoPopupOpen {
+    display: block;
+}
+
+.versionPopupTitle {
+    font-weight: 700;
+    margin-bottom: 6px;
 }
 
 #keyboardA {
