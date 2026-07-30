@@ -30,14 +30,13 @@
 #include "../magic63_version.h"
 
 /*
- * Use explicit IDs instead of TinyUSB's demo VID/PID scheme.
+ * MagicKey63 USB IDs.
  *
- * VID 0x1209 belongs to pid.codes for open-source hardware projects. PID
- * 0x4D63 is used here for MagicKey63 development builds to avoid TinyUSB demo
- * IDs; register a pid.codes PID before distributing hardware publicly.
+ * VID 0x2E8A is assigned to Raspberry Pi. PID 0x113A is allocated for
+ * MagicKey63 under Raspberry Pi's VID.
  */
-#define USB_VID           0x1209
-#define USB_PID           0x4D63
+#define USB_VID           0x2E8A
+#define USB_PID           0x113A
 
 // String Descriptor Index
 enum

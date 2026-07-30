@@ -109,15 +109,13 @@ git diff --exit-code -- web/webServer/out/index.html
 
 ### VID/PID 状态
 
-当前 USB VID/PID 是开发阶段配置，用于避免继续使用 TinyUSB demo ID。`firmware/usb/usb_descriptors.c` 中已明确标注 pid.codes 相关说明。正式公开销售或众筹出货前，需要完成并确认正式 PID 分配。
+当前 USB VID/PID 已更新为 Raspberry Pi 提供的 VID/PID：`0x2E8A:0x113A`。`firmware/usb/usb_descriptors.c` 中记录了分配来源，固件不再使用 TinyUSB demo ID 或临时开发 PID。
 
 发布前建议运行：
 
 ```sh
 tool/check_ci.sh --strict-release
 ```
-
-当前该命令会把临时 VID/PID 说明视为发布阻塞项。
 
 ## English
 
@@ -218,15 +216,13 @@ Different parts of this repository use different licenses. See `LICENSE` and `TH
 
 ### VID/PID Status
 
-The current USB VID/PID is for development and is documented in `firmware/usb/usb_descriptors.c` to avoid using TinyUSB demo IDs. A formally assigned PID must be completed and confirmed before public hardware distribution or crowdfunding fulfillment.
+The USB VID/PID has been updated to the Raspberry Pi provided assignment: `0x2E8A:0x113A`. The assignment source is documented in `firmware/usb/usb_descriptors.c`, and the firmware no longer uses TinyUSB demo IDs or a temporary development PID.
 
 Before release, run:
 
 ```sh
 tool/check_ci.sh --strict-release
 ```
-
-At the moment, this strict check treats the temporary VID/PID note as a release blocker.
 
 ## Repository Layout
 
