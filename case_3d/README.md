@@ -2,11 +2,20 @@
 
 This directory stores keyboard enclosure and mechanical structure files.
 
-## Current Files
+## Editable Source Files
 
-- `上盖&定位板.step`: Top cover and positioning plate.
-- `键盘底盖V3.1.7.step`: Keyboard bottom cover.
-- `空格键帽.step`: Spacebar keycap.
+- `top-cover-positioning-plate.step`: Top cover and positioning plate.
+- `keyboard-bottom-cover-v3.1.8.step`: Keyboard bottom cover.
+- `spacebar-keycap.step`: Spacebar keycap.
+
+## Preview Mesh Files
+
+These STL files are exported for lightweight web preview and 3D model viewing.
+Use the STEP files above as the editable mechanical source.
+
+- `positioning-plate.stl`: Positioning plate preview mesh.
+- `keyboard-bottom-cover-v3.1.8.stl`: Keyboard bottom cover preview mesh.
+- `spacebar-keycap.stl`: Spacebar keycap preview mesh.
 
 ## File Types
 
