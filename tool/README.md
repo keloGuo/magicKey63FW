@@ -40,6 +40,7 @@ WINDOWS_DRIVE='E:\' TIMEOUT_SECONDS=120 ./tool/flash_uf2_wsl.sh
 - `codex_app_server_hook.py`: Reads Codex App Server state and usage data, then
   posts status updates to the keyboard.
 - `codex_status.sh`: Manually posts one status value to the device.
+- `device_discover.sh`: Finds the keyboard HTTP URL for Codex status sync.
 - `ucodex`: Starts Codex with an App Server and a status watcher so keyboard
   LEDs and UI can reflect Codex working state.
 - `build_ucodex_deb.sh`: Packages `ucodex` and the status hook as a Debian
@@ -57,7 +58,11 @@ Common commands:
 
 Useful variables:
 
-- `DEVICE_URL`: Device HTTP base URL. Default is `http://10.63.27.1:80`.
+- `DEVICE_URL`: Device HTTP base URL. If unset, Codex status tools discover the
+  keyboard and cache the result in `~/.ucodex/device_url`.
+- `DEVICE_URL_CANDIDATES`: Space-separated URLs scanned by
+  `device_discover.sh`. Default includes `10.63.27.1`, `10.63.27.2`, and
+  `192.168.3.1`.
 - `BOOTLOADER_URL`: Device bootloader API URL used by flashing scripts. Default
   is `http://10.63.27.1/api/rebootToUf2`.
 - `WINDOWS_DRIVE`: Windows drive letter for the mounted `RPI-RP2` volume, for

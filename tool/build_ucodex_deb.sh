@@ -20,6 +20,7 @@ mkdir -p \
 
 install -m 0755 "$ROOT_DIR/tool/ucodex" "$PKG_DIR/usr/local/bin/ucodex"
 install -m 0755 "$ROOT_DIR/tool/codex_app_server_hook.py" "$PKG_DIR/usr/local/lib/ucodex/codex_app_server_hook.py"
+install -m 0755 "$ROOT_DIR/tool/device_discover.sh" "$PKG_DIR/usr/local/lib/ucodex/device_discover.sh"
 ln -s ../lib/ucodex/codex_app_server_hook.py "$PKG_DIR/usr/local/bin/ucodex-status"
 
 cat > "$PKG_DIR/DEBIAN/control" <<EOF_CONTROL

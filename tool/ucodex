@@ -20,12 +20,23 @@ fi
 if [[ ! -x "$HOOK_SCRIPT" && -x "$HOME/.local/lib/ucodex/codex_app_server_hook.py" ]]; then
   HOOK_SCRIPT="$HOME/.local/lib/ucodex/codex_app_server_hook.py"
 fi
+DEVICE_DISCOVER_SCRIPT="${UCODEX_DEVICE_DISCOVER_SCRIPT:-$SCRIPT_DIR/device_discover.sh}"
+if [[ ! -x "$DEVICE_DISCOVER_SCRIPT" && -x "/usr/local/lib/ucodex/device_discover.sh" ]]; then
+  DEVICE_DISCOVER_SCRIPT="/usr/local/lib/ucodex/device_discover.sh"
+fi
+if [[ ! -x "$DEVICE_DISCOVER_SCRIPT" && -x "$HOME/.local/lib/ucodex/device_discover.sh" ]]; then
+  DEVICE_DISCOVER_SCRIPT="$HOME/.local/lib/ucodex/device_discover.sh"
+fi
 
 mkdir -p "$LOG_DIR"
 
 HOST="${CODEX_STATUS_HOST:-127.0.0.1}"
 PORT_START="${CODEX_STATUS_PORT:-4222}"
-DEVICE_URL="${DEVICE_URL:-http://10.63.27.1:80}"
+if [[ -z "${DEVICE_URL:-}" && -x "$DEVICE_DISCOVER_SCRIPT" ]]; then
+  DEVICE_URL="$("$DEVICE_DISCOVER_SCRIPT" 2>>"$LOG_DIR/device-discover.log")"
+else
+  DEVICE_URL="${DEVICE_URL:-http://10.63.27.1:80}"
+fi
 CODEX_BIN="${CODEX_BIN:-codex}"
 
 APP_SERVER_PID=""
@@ -93,6 +104,7 @@ if ! wait_for_port "$PORT"; then
 fi
 
 printf '[codex-status] starting device status watcher\n' >&2
+printf '[codex-status] device URL: %s\n' "$DEVICE_URL" >&2
 rm -f "$STATE_FILE"
 DEVICE_URL="$DEVICE_URL" CODEX_STATUS_STATE_FILE="$STATE_FILE" "$HOOK_SCRIPT" \
   --app-server "$APP_SERVER_URL" \
