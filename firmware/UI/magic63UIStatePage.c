@@ -19,8 +19,6 @@ lv_obj_t* FuncSetActiveTabDataList[STATE_PAGE_FUNC_COUNT] = { NULL,NULL,NULL,NUL
 static int FuncSetActiveCount = 0;
 
 unsigned char ws2812GetCodexStatus(void);
-unsigned char magic63CodexUsageValid(void);
-unsigned char magic63CodexUsagePercent(void);
 
 static const char *statePageCodexStatusName(unsigned char status)
 {
@@ -163,7 +161,6 @@ unsigned char BackLightShowUpdateStatePage(unsigned char v)
 unsigned char upadtaStatePageShow(lv_obj_t* T, unsigned char v)
 {
     static lv_obj_t* layerCont = NULL;
-    static lv_obj_t* codexUsageUsed = NULL;
     static lv_obj_t* tName = NULL;
     static lv_obj_t* tValue = NULL;
     if(v >= STATE_PAGE_FUNC_COUNT) v = 2;
@@ -179,15 +176,6 @@ unsigned char upadtaStatePageShow(lv_obj_t* T, unsigned char v)
         lv_obj_set_style_bg_opa(layerCont, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_radius(layerCont, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_clip_corner(layerCont, true, LV_PART_MAIN | LV_STATE_DEFAULT);
-
-        codexUsageUsed = lv_label_create(layerCont);
-        lv_label_set_text(codexUsageUsed, "");
-        lv_obj_set_size(codexUsageUsed, 0, 2);
-        lv_obj_set_pos(codexUsageUsed, 4, 4);
-        lv_obj_set_style_bg_color(codexUsageUsed, lv_color_make(0x73, 0x73, 0x73), LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_bg_opa(codexUsageUsed, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_radius(codexUsageUsed, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_add_flag(codexUsageUsed, LV_OBJ_FLAG_HIDDEN);
 
         tName = lv_label_create(T);
         lv_label_set_text(tName, showFuncNumberList[showFuncNumber]);
@@ -224,29 +212,9 @@ unsigned char upadtaStatePageShow(lv_obj_t* T, unsigned char v)
         statePageSetValueLabel(FuncSetActiveTabDataList[v], v);
 
     }
-    if(layerCont != NULL && codexUsageUsed != NULL)
+    if(layerCont != NULL)
     {
-        if(showFuncNumber == 3)
-        {
-            unsigned char percent = magic63CodexUsageValid() ? magic63CodexUsagePercent() : 0;
-            unsigned int usedWidth = (42u * (100u - percent) + 50u) / 100u;
-            if(usedWidth > 42u) usedWidth = 42u;
-            lv_obj_set_style_bg_color(layerCont, lv_color_make(0x00, 0xff, 0x00), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_size(codexUsageUsed, (lv_coord_t)usedWidth, 2);
-            if(usedWidth > 0u)
-            {
-                lv_obj_clear_flag(codexUsageUsed, LV_OBJ_FLAG_HIDDEN);
-            }
-            else
-            {
-                lv_obj_add_flag(codexUsageUsed, LV_OBJ_FLAG_HIDDEN);
-            }
-        }
-        else
-        {
-            lv_obj_set_style_bg_color(layerCont, lv_color_make(0x00, 0xff, 0x00), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_add_flag(codexUsageUsed, LV_OBJ_FLAG_HIDDEN);
-        }
+        lv_obj_set_style_bg_color(layerCont, lv_color_make(0x00, 0xff, 0x00), LV_PART_MAIN | LV_STATE_DEFAULT);
     }
     return 0;
 }
@@ -254,18 +222,10 @@ unsigned char upadtaStatePageShow(lv_obj_t* T, unsigned char v)
 static void statePageCodexTimer(lv_timer_t *timer)
 {
     (void)timer;
-    static unsigned char lastUsageValid = 0xff;
-    static unsigned char lastUsagePercent = 0xff;
     unsigned char status = ws2812GetCodexStatus();
-    unsigned char usageValid = magic63CodexUsageValid();
-    unsigned char usagePercent = magic63CodexUsagePercent();
-    if(showFuncNumberValuelist[3] == status &&
-       lastUsageValid == usageValid &&
-       lastUsagePercent == usagePercent) return;
+    if(showFuncNumberValuelist[3] == status) return;
 
     showFuncNumberValuelist[3] = status;
-    lastUsageValid = usageValid;
-    lastUsagePercent = usagePercent;
     statePageSetValueLabel(FuncSetActiveTabDataList[3], 3);
     if(showFuncNumber == 3)
     {
