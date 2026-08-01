@@ -5,13 +5,7 @@
   中文
 </p>
 
-<!--
-项目图片占位：
-发布到 GitHub/Crowd Supply 前，可以在这里添加产品照片或渲染图。
-建议路径：docs/images/magickey63-hero.jpg
-
-![MagicKey63 产品照片或渲染图](docs/images/magickey63-hero.jpg)
--->
+![MagicKey63 键盘正面图](image/magickey63-hero.jpg)
 
 MagicKey63 是一个以机械键盘为载体的开源 RP2040 交互硬件平台。它可以作为一把日常使用的紧凑 63 键键盘，也可以作为工程师、创客和固件爱好者继续修改、扩展和实验的桌面设备。
 

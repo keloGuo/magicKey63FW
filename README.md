@@ -5,13 +5,7 @@
   <a href="README.zh-CN.md">中文</a>
 </p>
 
-<!--
-Project image placeholder:
-Add a product photo or render here before publishing on GitHub/Crowd Supply.
-Suggested path: docs/images/magickey63-hero.jpg
-
-![MagicKey63 product photo or render](docs/images/magickey63-hero.jpg)
--->
+![MagicKey63 keyboard front view](image/magickey63-hero.jpg)
 
 MagicKey63 is an open-source RP2040 interactive hardware platform built into a compact mechanical keyboard. It works as a daily 63-key keyboard, but it is also designed for engineers, makers, and firmware hackers who want to modify and extend their desktop tools.
 
